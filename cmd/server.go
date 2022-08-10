@@ -1,12 +1,9 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	"github.com/DavidC0rtes/client-server/tcp"
@@ -16,10 +13,9 @@ import (
 var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Initialize the server",
-	Long: `tells the application to start in server mode.`,
+	Long:  `tells the application to start in server mode.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("server called")
-		tcp.Run()
+	tcp.Run()
 	},
 }
 

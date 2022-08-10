@@ -1,12 +1,10 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
 	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +12,7 @@ import (
 var clientCmd = &cobra.Command{
 	Use:   "client",
 	Short: "Initialize a client",
-	Long: `Starts the app in client mode.`,
+	Long:  `Starts the app in client mode.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("client called")
 	},

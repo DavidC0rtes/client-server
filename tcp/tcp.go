@@ -2,8 +2,11 @@ package tcp
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -27,7 +30,7 @@ func Run() {
 		conn, err := listen.Accept()
 		if err != nil {
 			fmt.Println("Error accepting: ", err.Error())
-			os.Exit(1)
+			os.Exit(2)
 		}
 
 		go handleIncomingRequest(conn)
@@ -36,13 +39,65 @@ func Run() {
 
 func handleIncomingRequest(conn net.Conn) {
 	// store incoming data
-	buffer := make([]byte, 1024)
-	_, err := conn.Read(buffer)
+	buffer := make([]byte, 4096)
+	n, err := conn.Read(buffer)
 	if err != nil {
 		fmt.Println("Error reading:", err.Error())
+		os.Exit(1)
 	}
-	// Send response back to client.
-	conn.Write([]byte("Message received."))
-	fmt.Println(string(buffer))
+
+	processRequest(string(buffer[:n]), conn)
 	conn.Close()
+}
+
+/*
+*
+Sending files: -> <content-size> <file> @<channel>
+Subscribing to channel: listen <channel>
+*/
+func processRequest(body string, conn net.Conn) {
+	content := strings.Split(body, " ")
+
+	switch {
+	case content[0] == "->":
+		receiveFile(content[1], content[2], conn)
+	case content[0] == "listen":
+		fmt.Println("Subscribing!")
+	default:
+		fmt.Printf("Malformed request: %s\n", body)
+		os.Exit(1)
+	}
+}
+
+func receiveFile(size, filename string, conn net.Conn) {
+	// Convert size to int64
+	fileSize, err := strconv.ParseInt(size, 10, 64)
+	if err != nil {
+		fmt.Println("Error reading file size")
+		os.Exit(1)
+	}
+
+	if _, err = conn.Write([]byte("OK")); err != nil {
+		fmt.Println("Error sending ok?", err.Error())
+	}
+
+	destFile, err := os.Create("out")
+	if err != nil {
+		fmt.Println("Error creating destination file: ", err.Error())
+		os.Exit(1)
+	}
+	defer destFile.Close()
+
+	// Time to receive file contents.
+	n, err := io.Copy(destFile, conn)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	if n != fileSize {
+		fmt.Printf("Filesize was %d, but %d bytes written\n", fileSize, n)
+		return
+	}
+	fmt.Println("OI")
 }
