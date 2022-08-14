@@ -27,7 +27,7 @@ var sendCmd = &cobra.Command{
 	Long:  `Allows the client to send files to the TCP server in the specified channel.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("send called")
-		client_tcp.Start(args[0], channel)
+		client_tcp.PrepareSend(args[0], channel)
 	},
 }
 
