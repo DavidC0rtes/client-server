@@ -2,7 +2,6 @@ package tcp
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"strconv"
@@ -15,15 +14,28 @@ const (
 	CONN_TYPE = "tcp"
 )
 
-var channels = make([]chan []byte, 2)
+// Info Metadata
+type Info struct {
+	channel  chan []byte
+	currFile string
+	filesize int64
+}
+
+var channels = map[int]Info{
+	0: {
+		make(chan []byte),
+		"",
+		0,
+	},
+	1: {
+		make(chan []byte),
+		"",
+		0,
+	},
+}
 
 func Run() {
 	fmt.Println("Server running...")
-
-	// Initialize two channels
-	for i, _ := range channels {
-		channels[i] = make(chan []byte)
-	}
 
 	listen, err := net.Listen(CONN_TYPE, CONN_HOST+":"+CONN_PORT)
 	if err != nil {
@@ -40,7 +52,6 @@ func Run() {
 			fmt.Println("Error accepting: ", err.Error())
 			os.Exit(2)
 		}
-
 		go handleIncomingRequest(conn)
 	}
 }
@@ -59,9 +70,11 @@ func handleIncomingRequest(conn net.Conn) {
 }
 
 /*
-*
-Sending files: -> <content-size> <file> <channel>
-Subscribing to channel: listen <channel>
+Process any given request sent to the server.
+A valid request has the form:
+
+	Sending files: -> <content-size> <file> <channel>
+	Subscribing to channel: listen <channel>
 */
 func processRequest(body string, conn net.Conn) {
 	content := strings.Split(body, " ")
@@ -73,7 +86,6 @@ func processRequest(body string, conn net.Conn) {
 		receiveFile(content[1], content[2], channel, conn)
 	case content[0] == "listen":
 		channel, _ := strconv.Atoi(content[1])
-
 		sendtoClient(channel, conn)
 
 	default:
@@ -82,6 +94,9 @@ func processRequest(body string, conn net.Conn) {
 	}
 }
 
+/*
+Receives files from the connected client under the specified channel.
+*/
 func receiveFile(size, filename string, channel int, conn net.Conn) {
 	// Convert size to int64
 	fileSize, err := strconv.ParseInt(size, 10, 64)
@@ -91,59 +106,55 @@ func receiveFile(size, filename string, channel int, conn net.Conn) {
 	}
 
 	if _, err = conn.Write([]byte("OK")); err != nil {
-		fmt.Println("Error sending ok?", err.Error())
+		fmt.Println("Error sending OK signal to client", err.Error())
 	}
 
-	destFile, err := os.Create("out")
+	if copy, ok := channels[channel]; ok {
+		copy.currFile = filename
+		copy.filesize = fileSize
+		channels[channel] = copy
+	}
+
+	fmt.Printf("Emitting data over channel %d\n", channel)
+	inputBuffer := make([]byte, fileSize)
+	nBytes, err := conn.Read(inputBuffer)
 	if err != nil {
-		fmt.Println("Error creating destination file: ", err.Error())
-		os.Exit(1)
+		fmt.Println("Error reading file", err.Error())
 	}
-	defer destFile.Close()
-
-	// Time to receive file contents.
-	n, err := io.CopyN(destFile, conn, fileSize)
-
+	// Emit forever on channel.
+	fmt.Printf("%v %d\n", channels[channel].currFile, nBytes)
+	// Hacer esto cuando se este enviando al cliente, cuando esté conectado.
+	msg := fmt.Sprintf("%v %d", channels[channel].currFile, nBytes)
+	_, err = conn.Write([]byte(msg))
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-
-	if n != fileSize {
-		fmt.Printf("Filesize was %d, but %d bytes written\n", fileSize, n)
-		return
+	for {
+		channels[channel].channel <- inputBuffer
 	}
-	fmt.Printf("%d bytes received and written to %v\n", n, destFile.Name())
-	if _, err = conn.Write([]byte("File contents received.")); err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-
-	data, err := os.ReadFile(destFile.Name())
-	if err != nil {
-		fmt.Println("Error opening out file", err.Error())
-		os.Exit(1)
-	}
-	fmt.Printf("Sending data to channel %d\n", channel)
-	channels[channel] <- data
 }
 
+/*
+Sends a file to the clients listening on the specified channel.
+*/
 func sendtoClient(channel int, conn net.Conn) {
-	if channel > len(channels) {
-		fmt.Println("Oops, not enough channels.")
+	givenChannel, ok := channels[channel]
+	// Clients in receive mode aren't allowed to create channels.
+	if !ok {
+		fmt.Printf("Channel %d does not exist.\n")
 		return
 	}
 
 	fmt.Printf("Subscribing to %d!\n", channel)
 
+	// Receives and broadcast file contents to the channel.
 	for {
 		select {
-		case data := <-channels[channel]:
-			fmt.Printf("Receiving over channel %d\n", channel)
-
+		case data := <-givenChannel.channel:
 			if _, err := conn.Write(data); err != nil {
 				fmt.Println(err.Error())
-				break
+				return
 			}
 		}
 	}

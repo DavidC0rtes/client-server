@@ -60,12 +60,6 @@ func sendFile(fstat os.FileInfo, conn net.Conn, buf []byte) {
 	source.Close()
 
 	fmt.Printf("Sent %d bytes to the server.\n", nBytes)
-	_, err = conn.Read(buf)
-	if err != nil {
-		fmt.Println("Error reading response", err.Error())
-		os.Exit(1)
-	}
-	fmt.Println(string(buf))
 }
 
 func Subscribe(channel int) {
@@ -73,26 +67,40 @@ func Subscribe(channel int) {
 	defer conn.Close()
 	// Communicate with server
 	message := fmt.Sprintf("listen %d", channel)
+
 	_, err := conn.Write([]byte(message))
 	if err != nil {
 		fmt.Println("Error sending message", err.Error())
 	}
-
+	buf := make([]byte, 4096)
+	n, err := conn.Read(buf)
+	if err != nil {
+		fmt.Println("Error reading current filename", err.Error())
+		os.Exit(1)
+	}
+	filename := string(buf[:n])
+	fmt.Println(filename)
 	// Response from server
 	ch := make(chan []byte)
 	ech := make(chan error)
 	go waitResponse(conn, ch, ech)
 
-	//ticker := time.Tick(time.Second)
 	for {
 		select {
 		// Received data from the connection
 		case data := <-ch:
-			fmt.Println(data)
+			fmt.Println(len(data))
+			/*write, err := recFile.Write(data)
+			if err != nil {
+				fmt.Println(err.Error())
+				os.Exit(1)
+			}
+			fmt.Printf("Wrote %d bytes to %v.\n", write, filename)*/
+			return
 		// Received an error  from the connection :(
 		case err := <-ech:
 			fmt.Println("Recieved error", err.Error())
-			break
+			os.Exit(1)
 		}
 	}
 }
@@ -101,11 +109,11 @@ func waitResponse(conn net.Conn, ch chan []byte, che chan error) {
 	for {
 		// Read data
 		data := make([]byte, 4096)
-		_, err := conn.Read(data)
+		n, err := conn.Read(data)
 		if err != nil {
 			che <- err
 			return
 		}
-		ch <- data
+		ch <- data[:n]
 	}
 }
