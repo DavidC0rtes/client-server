@@ -1,7 +1,8 @@
-package tcp
+package server_tcp
 
 import (
 	"fmt"
+	"github.com/DavidC0rtes/client-server/utils"
 	"net"
 	"os"
 	"strconv"
@@ -117,19 +118,11 @@ func receiveFile(size, filename string, channel int, conn net.Conn) {
 
 	fmt.Printf("Emitting data over channel %d\n", channel)
 	inputBuffer := make([]byte, fileSize)
-	nBytes, err := conn.Read(inputBuffer)
+	_, err = conn.Read(inputBuffer)
 	if err != nil {
 		fmt.Println("Error reading file", err.Error())
 	}
 	// Emit forever on channel.
-	fmt.Printf("%v %d\n", channels[channel].currFile, nBytes)
-	// Hacer esto cuando se este enviando al cliente, cuando esté conectado.
-	msg := fmt.Sprintf("%v %d", channels[channel].currFile, nBytes)
-	_, err = conn.Write([]byte(msg))
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
 	for {
 		channels[channel].channel <- inputBuffer
 	}
@@ -140,20 +133,25 @@ Sends a file to the clients listening on the specified channel.
 */
 func sendtoClient(channel int, conn net.Conn) {
 	givenChannel, ok := channels[channel]
-	// Clients in receive mode aren't allowed to create channels.
 	if !ok {
 		fmt.Printf("Channel %d does not exist.\n")
 		return
 	}
 
-	fmt.Printf("Subscribing to %d!\n", channel)
+	fmt.Printf("Subscribing to %d\n", channel)
 
 	// Receives and broadcast file contents to the channel.
 	for {
 		select {
 		case data := <-givenChannel.channel:
-			if _, err := conn.Write(data); err != nil {
-				fmt.Println(err.Error())
+			foo := make([]byte, 4096)
+			biz := make([]byte, 20)
+			biz = append(biz, utils.TruncateFilename(givenChannel.currFile, 20)...)
+			foo = append(foo, biz...)
+			foo = append(foo, data...)
+
+			if _, err := conn.Write(foo); err != nil {
+				fmt.Println("Error writing to connection", err.Error())
 				return
 			}
 		}

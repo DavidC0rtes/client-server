@@ -6,7 +6,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/DavidC0rtes/client-server/tcp"
+	"github.com/DavidC0rtes/client-server/server-tcp"
 )
 
 // serverCmd represents the server command
@@ -15,7 +15,7 @@ var serverCmd = &cobra.Command{
 	Short: "Initialize the server",
 	Long:  `tells the application to start in server mode.`,
 	Run: func(cmd *cobra.Command, args []string) {
-	tcp.Run()
+		server_tcp.Run()
 	},
 }
 
