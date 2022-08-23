@@ -1,12 +1,21 @@
 package client_tcp
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net"
 	"os"
 )
+
+type NewFile struct {
+	name string
+	size int64
+}
+
+var fileFromServer = NewFile{
+	"",
+	0,
+}
 
 /*
 Starts a connection with the server on ::3000
@@ -90,32 +99,30 @@ func Subscribe(channel int) {
 	// Response from server
 	ch := make(chan []byte)
 	ech := make(chan error)
+
 	go waitResponse(conn, ch, ech)
 
 	for {
+
 		select {
-		// Received data from the connection
-		case data := <-ch:
-			// If there's a different file being transmitted or filesize changed...
-			if _, err := os.Stat(string(data[:20])); err == nil {
-				fmt.Println("File already in disk.")
-				if _, err := conn.Write([]byte("NO")); err != nil {
-					fmt.Println("Couldn't send NO to server", err)
-					os.Exit(1)
-				}
-
-			} else if errors.Is(err, os.ErrNotExist) {
-
-				recFile, err := os.Create(string(data[:20]))
-
-				write, err := recFile.Write(data[21:])
-				if err != nil {
-					fmt.Println("Error writing file:", err)
-					os.Exit(1)
-				}
-				fmt.Printf("Wrote %d bytes to %v.\n", write, recFile.Name())
+		case <-ch:
+			file, err := os.Create(fileFromServer.name)
+			if err != nil {
+				fmt.Printf("Couldn't create %v %v", fileFromServer.name, err)
+				os.Exit(1)
 			}
-
+			n, err := io.CopyN(file, conn, fileFromServer.size)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			if err := file.Close(); err != nil {
+				fmt.Println("Couldn't close file", err)
+				os.Exit(1)
+			}
+			fmt.Printf("Received %d bytes from server copied to %v\n", n, fileFromServer.name)
+			//*p = true
+			fmt.Println("Free!")
 		// Received an error  from the connection :(
 		case err := <-ech:
 			fmt.Println("Received error", err.Error())
@@ -127,12 +134,43 @@ func Subscribe(channel int) {
 func waitResponse(conn net.Conn, ch chan []byte, che chan error) {
 	data := make([]byte, 4096)
 	for {
+		fmt.Println("Hola")
 		// Read data
 		n, err := conn.Read(data)
 		if err != nil {
 			che <- err
 			return
 		}
-		ch <- data[:n]
+		fmt.Printf("Receved name %v\n", string(data[:n]))
+		conn.Write([]byte("OK"))
+
+		n, err = conn.Read(data)
+		if err != nil {
+			che <- err
+			return
+		}
+
+		/*fmt.Printf("Current name: %v, transmitted: %v\n", fileFromServer.name, string(data[:n]))
+		fileFromServer.name = string(data[:n])
+		conn.Write([]byte("OK"))
+
+		n, err = conn.Read(data)
+		if err != nil {
+			fmt.Println("Error reading filesize", err)
+			os.Exit(1)
+		}
+		fileFromServer.size, err = strconv.ParseInt(string(data[:n]), 10, 64)
+		if err != nil {
+			fmt.Println("Error in filesize", err)
+			os.Exit(1)
+		}
+		fmt.Printf("File size is %dB\n", fileFromServer.size)
+
+		if _, err := conn.Write([]byte("OK")); err != nil {
+			fmt.Println("Error ok 2", err)
+			os.Exit(1)
+		}
+
+		ch <- true*/
 	}
 }

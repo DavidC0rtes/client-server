@@ -2,7 +2,6 @@ package server_tcp
 
 import (
 	"fmt"
-	"github.com/DavidC0rtes/client-server/utils"
 	"net"
 	"os"
 	"strconv"
@@ -122,6 +121,11 @@ func receiveFile(size, filename string, channel int, conn net.Conn) {
 	if err != nil {
 		fmt.Println("Error reading file", err.Error())
 	}
+
+	if err := os.WriteFile("out", inputBuffer, 0666); err != nil {
+		fmt.Println("Couldn't create out file:", err)
+		return
+	}
 	// Emit forever on channel.
 	for {
 		channels[channel].channel <- inputBuffer
@@ -141,18 +145,51 @@ func sendtoClient(channel int, conn net.Conn) {
 	fmt.Printf("Subscribing to %d\n", channel)
 
 	// Receives and broadcast file contents to the channel.
+	buf := make([]byte, 2)
 	for {
 		select {
 		case data := <-givenChannel.channel:
-			foo := make([]byte, 4096)
-			biz := make([]byte, 20)
-			biz = append(biz, utils.TruncateFilename(givenChannel.currFile, 20)...)
-			foo = append(foo, biz...)
-			foo = append(foo, data...)
-
-			if _, err := conn.Write(foo); err != nil {
-				fmt.Println("Error writing to connection", err.Error())
+			fmt.Printf("Sending %v\n", givenChannel.currFile)
+			if _, err := conn.Write([]byte(givenChannel.currFile)); err != nil {
+				fmt.Println("Couldn't send filename to client", err)
 				return
+			}
+
+			if _, err := conn.Read(buf); err != nil {
+				fmt.Println("Couldn't read OK from client", err)
+				return
+			}
+
+			if string(buf) == "OK" {
+				n, err := conn.Write(data)
+				if err != nil {
+					fmt.Println("Data not sent", err)
+					return
+				}
+				fmt.Printf("Sent %dB to connection\n", n)
+				/*hmm := strconv.Itoa(int(givenChannel.filesize))
+				_, err := conn.Write([]byte(hmm))
+				if _, err := conn.Read(buf); err != nil {
+					fmt.Println("Couldn't read x from client", err)
+					return
+				}
+
+				file, err := os.Open("out")
+				if err != nil {
+					fmt.Println("Couldn't open out", err)
+					return
+				}
+
+				if n, err := io.CopyN(conn, file, givenChannel.filesize); err != nil {
+					fmt.Printf("Copied %d bytes instead of %d %v", n, givenChannel.filesize, err)
+					return
+				}
+
+				if err := file.Close(); err != nil {
+					fmt.Println("Couldn't close file", err)
+					return
+				}
+				fmt.Printf("File sent succesfully\n")*/
 			}
 		}
 	}
