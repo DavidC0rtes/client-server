@@ -62,7 +62,7 @@ func handleIncomingRequest(conn net.Conn) {
 	n, err := conn.Read(buffer)
 	if err != nil {
 		fmt.Println("Error reading request:", err.Error())
-		os.Exit(1)
+		return
 	}
 
 	processRequest(string(buffer[:n]), conn)
@@ -99,6 +99,7 @@ Receives files from the connected client under the specified channel.
 */
 func receiveFile(size, filename string, channel int, conn net.Conn) {
 	// Convert size to int64
+	fmt.Println(filename)
 	fileSize, err := strconv.ParseInt(size, 10, 64)
 	if err != nil {
 		fmt.Println("Error reading file size")
@@ -126,35 +127,32 @@ func receiveFile(size, filename string, channel int, conn net.Conn) {
 		fmt.Println("Couldn't create out file:", err)
 		return
 	}
-	// Emit forever on channel.
-	for {
-		channels[channel].channel <- inputBuffer
-	}
+	channels[channel].channel <- inputBuffer
 }
 
 /*
 Sends a file to the clients listening on the specified channel.
 */
 func sendtoClient(channel int, conn net.Conn) {
-	givenChannel, ok := channels[channel]
-	if !ok {
+
+	if _, ok := channels[channel]; !ok {
 		fmt.Printf("Channel %d does not exist.\n")
 		return
 	}
-
 	fmt.Printf("Subscribing to %d\n", channel)
 
 	// Receives and broadcast file contents to the channel.
-	buf := make([]byte, 2)
 	for {
+		buf := make([]byte, 2)
 		select {
-		case data := <-givenChannel.channel:
-			fmt.Printf("Sending %v\n", givenChannel.currFile)
-			if _, err := conn.Write([]byte(givenChannel.currFile)); err != nil {
+		case data := <-channels[channel].channel:
+			fmt.Printf("Sending %v\n", channels[channel].currFile)
+			n, err := conn.Write([]byte(channels[channel].currFile))
+			if err != nil {
 				fmt.Println("Couldn't send filename to client", err)
 				return
 			}
-
+			fmt.Printf("Waiting on OK %d\n", n)
 			if _, err := conn.Read(buf); err != nil {
 				fmt.Println("Couldn't read OK from client", err)
 				return
@@ -167,29 +165,10 @@ func sendtoClient(channel int, conn net.Conn) {
 					return
 				}
 				fmt.Printf("Sent %dB to connection\n", n)
-				/*hmm := strconv.Itoa(int(givenChannel.filesize))
-				_, err := conn.Write([]byte(hmm))
 				if _, err := conn.Read(buf); err != nil {
-					fmt.Println("Couldn't read x from client", err)
+					fmt.Println("Couldn't read ok from client", err)
 					return
 				}
-
-				file, err := os.Open("out")
-				if err != nil {
-					fmt.Println("Couldn't open out", err)
-					return
-				}
-
-				if n, err := io.CopyN(conn, file, givenChannel.filesize); err != nil {
-					fmt.Printf("Copied %d bytes instead of %d %v", n, givenChannel.filesize, err)
-					return
-				}
-
-				if err := file.Close(); err != nil {
-					fmt.Println("Couldn't close file", err)
-					return
-				}
-				fmt.Printf("File sent succesfully\n")*/
 			}
 		}
 	}
