@@ -17,23 +17,25 @@ const (
 
 // Info Metadata
 type Info struct {
-	channel  chan []byte
-	currFile string
-	filesize int64
-	total    int64
-	clients  []string
+	CurrFile string
+	Filesize int64
+	Total    int64
+	Clients  []string
 }
 
-var channels = map[int]Info{
+var chans = []chan []byte{
+	make(chan []byte),
+	make(chan []byte),
+}
+
+var Data = map[int]Info{
 	0: {
-		make(chan []byte),
 		"",
 		0,
 		0,
 		make([]string, 100),
 	},
 	1: {
-		make(chan []byte),
 		"",
 		0,
 		0,
@@ -96,14 +98,13 @@ func processRequest(body string, conn net.Conn) {
 	case content[0] == "->":
 		receiveFile(content[1], content[2], channel, conn)
 	case content[0] == "listen":
-
-		if copy, ok := channels[channel]; ok {
-			copy.clients = append(channels[channel].clients, clientAddr)
-			fmt.Printf("%v\n", copy.clients)
-			m.Lock()
-			channels[channel] = copy
-			m.Unlock()
+		m.Lock()
+		if copy, ok := Data[channel]; ok {
+			copy.Clients = append(Data[channel].Clients, clientAddr)
+			fmt.Printf("%v\n", copy.Clients)
+			Data[channel] = copy
 		}
+		m.Unlock()
 
 		sendtoClient(channel, conn)
 
@@ -128,23 +129,22 @@ func receiveFile(size, filename string, channel int, conn net.Conn) {
 		fmt.Println("Error sending OK signal to client", err.Error())
 	}
 
-	if copy, ok := channels[channel]; ok {
-		copy.currFile = filename
-		copy.filesize = fileSize
-		copy.total = channels[channel].total + fileSize
-		m.Lock()
-		channels[channel] = copy
-		m.Unlock()
-	}
+	m.Lock()
+	if copy, ok := Data[channel]; ok {
+		copy.CurrFile = filename
+		copy.Filesize = fileSize
+		copy.Total = Data[channel].Total + fileSize
 
+		Data[channel] = copy
+	}
+	m.Unlock()
 	inputBuffer := make([]byte, fileSize)
 	_, err = conn.Read(inputBuffer)
 	if err != nil {
 		fmt.Println("Error reading file", err.Error())
 	}
-
 	fmt.Printf("Emitting data over channel %d\n", channel)
-	channels[channel].channel <- inputBuffer
+	chans[channel] <- inputBuffer
 }
 
 /*
@@ -152,7 +152,7 @@ Sends a file to the clients listening on the specified channel.
 */
 func sendtoClient(channel int, conn net.Conn) {
 
-	if _, ok := channels[channel]; !ok {
+	if _, ok := Data[channel]; !ok {
 		fmt.Printf("Channel %d does not exist.\n")
 		return
 	}
@@ -162,9 +162,11 @@ func sendtoClient(channel int, conn net.Conn) {
 	for {
 		buf := make([]byte, 2)
 		select {
-		case data := <-channels[channel].channel:
-			fmt.Printf("Sending %v\n", channels[channel].currFile)
-			n, err := conn.Write([]byte(channels[channel].currFile))
+		case data := <-chans[channel]:
+			m.Lock()
+			fmt.Printf("Sending %v\n", Data[channel].CurrFile)
+			n, err := conn.Write([]byte(Data[channel].CurrFile))
+			m.Unlock()
 			if err != nil {
 				fmt.Println("Couldn't send filename to client", err)
 				return
@@ -188,4 +190,8 @@ func sendtoClient(channel int, conn net.Conn) {
 			}
 		}
 	}
+}
+
+func GetData() *map[int]Info {
+	return &Data
 }
