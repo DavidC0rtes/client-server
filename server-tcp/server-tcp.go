@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 const (
@@ -19,6 +20,8 @@ type Info struct {
 	channel  chan []byte
 	currFile string
 	filesize int64
+	total    int64
+	clients  []string
 }
 
 var channels = map[int]Info{
@@ -26,13 +29,19 @@ var channels = map[int]Info{
 		make(chan []byte),
 		"",
 		0,
+		0,
+		make([]string, 100),
 	},
 	1: {
 		make(chan []byte),
 		"",
 		0,
+		0,
+		make([]string, 100),
 	},
 }
+
+var m sync.Mutex
 
 func Run() {
 	fmt.Println("Server running...")
@@ -80,12 +89,22 @@ func processRequest(body string, conn net.Conn) {
 	content := strings.Split(body, " ")
 	fmt.Printf(">>>>>> %v\n", body)
 
+	channel, _ := strconv.Atoi(content[len(content)-2])
+	clientAddr := content[len(content)-1]
+
 	switch {
 	case content[0] == "->":
-		channel, _ := strconv.Atoi(content[3])
 		receiveFile(content[1], content[2], channel, conn)
 	case content[0] == "listen":
-		channel, _ := strconv.Atoi(content[1])
+
+		if copy, ok := channels[channel]; ok {
+			copy.clients = append(channels[channel].clients, clientAddr)
+			fmt.Printf("%v\n", copy.clients)
+			m.Lock()
+			channels[channel] = copy
+			m.Unlock()
+		}
+
 		sendtoClient(channel, conn)
 
 	default:
@@ -99,7 +118,6 @@ Receives files from the connected client under the specified channel.
 */
 func receiveFile(size, filename string, channel int, conn net.Conn) {
 	// Convert size to int64
-	fmt.Println(filename)
 	fileSize, err := strconv.ParseInt(size, 10, 64)
 	if err != nil {
 		fmt.Println("Error reading file size")
@@ -113,20 +131,19 @@ func receiveFile(size, filename string, channel int, conn net.Conn) {
 	if copy, ok := channels[channel]; ok {
 		copy.currFile = filename
 		copy.filesize = fileSize
+		copy.total = channels[channel].total + fileSize
+		m.Lock()
 		channels[channel] = copy
+		m.Unlock()
 	}
 
-	fmt.Printf("Emitting data over channel %d\n", channel)
 	inputBuffer := make([]byte, fileSize)
 	_, err = conn.Read(inputBuffer)
 	if err != nil {
 		fmt.Println("Error reading file", err.Error())
 	}
 
-	if err := os.WriteFile("out", inputBuffer, 0666); err != nil {
-		fmt.Println("Couldn't create out file:", err)
-		return
-	}
+	fmt.Printf("Emitting data over channel %d\n", channel)
 	channels[channel].channel <- inputBuffer
 }
 
@@ -155,7 +172,6 @@ func sendtoClient(channel int, conn net.Conn) {
 			fmt.Printf("Waiting on OK %d\n", n)
 			if _, err := conn.Read(buf); err != nil {
 				fmt.Println("Couldn't read OK from client", err)
-				return
 			}
 
 			if string(buf) == "OK" {
@@ -172,5 +188,4 @@ func sendtoClient(channel int, conn net.Conn) {
 			}
 		}
 	}
-
 }

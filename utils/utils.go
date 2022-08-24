@@ -1,9 +1,13 @@
 package utils
 
-func TruncateFilename(filename string, limit int) []byte {
-	temp := []byte(filename)
-	if len(filename) >= limit {
-		return temp[:limit]
+func FindAndDelete(haystack []string, needle string) []string {
+	new := make([]string, len(haystack))
+	index := 0
+	for _, v := range haystack {
+		if v != needle {
+			new = append(new, v)
+			index++
+		}
 	}
-	return temp
+	return new[:index]
 }
