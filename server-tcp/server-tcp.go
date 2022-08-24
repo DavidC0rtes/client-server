@@ -55,7 +55,7 @@ func Run() {
 	}
 	defer listen.Close()
 	fmt.Printf("Waiting for incoming requests on %s:%s\n", CONN_HOST, CONN_PORT)
-
+	go startAPI()
 	// forever...
 	for {
 		conn, err := listen.Accept()
