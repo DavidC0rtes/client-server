@@ -1,4 +1,5 @@
 <script setup>
+import ClientData from './components/ClientData.vue';
 </script>
 
 <template>
@@ -7,12 +8,7 @@
       <div class="row">
         <div class="col-md-6 offset-md-3 py-5">
           <h1>Server frontend</h1>
-        </div>
-      </div>
-
-      <div id="info" class="row">
-        <div class="col-md-5">
-          hola
+          <ClientData/>
         </div>
       </div>
     </div>
