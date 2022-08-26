@@ -2,6 +2,7 @@ package server_tcp
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strconv"
@@ -93,6 +94,24 @@ func processRequest(body string, conn net.Conn, id int) {
 
 	channel, _ := strconv.Atoi(content[len(content)-2])
 	clientAddr := content[len(content)-1]
+
+	// Spaghetti to detect when a client terminates.
+	go func() {
+		b := make([]byte, 1)
+		for {
+			_, err := conn.Read(b)
+			if err != nil {
+
+				if err == io.EOF {
+					fmt.Printf("Client %d disconnected from channel %d\n", id, channel)
+					m.Lock()
+					delete(Data[channel].Clients, id)
+					m.Unlock()
+				}
+				return
+			}
+		}
+	}()
 
 	switch {
 	case content[0] == "->":
