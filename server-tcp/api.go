@@ -1,7 +1,8 @@
 package server_tcp
 
 import (
-	"log"
+	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/gin-contrib/cors"
@@ -24,8 +25,17 @@ func getInfo(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, Data)
 }
 
-func checkError(err error) {
+func checkError(err error, id, channel int) {
 	if err != nil {
-		log.Panic(err)
+
+		if err == io.EOF {
+			fmt.Printf("Client %d disconnected from channel %d\n", id, channel)
+			m.Lock()
+			delete(Data[channel].Clients, id)
+			m.Unlock()
+		}
+
+		fmt.Println(err)
+		//return
 	}
 }

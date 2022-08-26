@@ -5,6 +5,8 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 type NewFile struct {
@@ -28,6 +30,18 @@ func connect() net.Conn {
 		fmt.Println("Error connecting to server", err)
 		os.Exit(1)
 	}
+
+	// We need to detect when ctrl c (SIGINT) is sent
+	// to tell the server to disconnect the client
+	// and update the Data struct.
+	chanSignal := make(chan os.Signal)
+	signal.Notify(chanSignal, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-chanSignal
+		disconnect(conn)
+		os.Exit(0)
+	}()
+
 	return conn
 }
 
@@ -145,5 +159,19 @@ func waitResponse(conn net.Conn, ch chan []byte, che chan error) {
 			che <- err
 			return
 		}
+	}
+}
+
+func disconnect(conn net.Conn) {
+	msg := fmt.Sprintf("disconnect %s", conn.LocalAddr().String())
+	fmt.Println("Sending disconnect!")
+	_, err := conn.Write([]byte(msg))
+	checkError(err)
+}
+
+func checkError(err error) {
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }

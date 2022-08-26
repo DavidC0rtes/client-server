@@ -21,8 +21,8 @@ const updateData = async() => {
 		<h2>Latest data from server</h2>
 		<hr/>
 		<h4>Listening clients</h4>
-		<div v-for="(channel, i) in data" :key="i">On channel {{i}}:
-			<ul v-for="(client, k) in channel.Clients.filter(x => x != '')" :key="k">
+		<div v-for="(channelObj, i) in data" :key="i">On channel {{i}}:
+			<ul v-for="(client, k) in channelObj.Clients" :key="k">
 				<li>{{client}}</li>
 			</ul>
 		</div>

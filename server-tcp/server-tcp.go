@@ -20,7 +20,7 @@ type Info struct {
 	CurrFile string
 	Filesize int64
 	Total    int64
-	Clients  []string
+	Clients  map[int]string
 }
 
 var chans = []chan []byte{
@@ -33,13 +33,13 @@ var Data = map[int]Info{
 		"",
 		0,
 		0,
-		make([]string, 100),
+		make(map[int]string),
 	},
 	1: {
 		"",
 		0,
 		0,
-		make([]string, 100),
+		make(map[int]string),
 	},
 }
 
@@ -57,17 +57,17 @@ func Run() {
 	fmt.Printf("Waiting for incoming requests on %s:%s\n", CONN_HOST, CONN_PORT)
 	go startAPI()
 	// forever...
-	for {
+	for i := 0; ; i++ {
 		conn, err := listen.Accept()
 		if err != nil {
 			fmt.Println("Error accepting: ", err.Error())
 			os.Exit(2)
 		}
-		go handleIncomingRequest(conn)
+		go handleIncomingRequest(conn, i)
 	}
 }
 
-func handleIncomingRequest(conn net.Conn) {
+func handleIncomingRequest(conn net.Conn, id int) {
 	// store incoming data
 	buffer := make([]byte, 4096)
 	n, err := conn.Read(buffer)
@@ -76,7 +76,7 @@ func handleIncomingRequest(conn net.Conn) {
 		return
 	}
 
-	processRequest(string(buffer[:n]), conn)
+	processRequest(string(buffer[:n]), conn, id)
 	conn.Close()
 }
 
@@ -87,7 +87,7 @@ A valid request has the form:
 	Sending files: -> <content-size> <file> <channel>
 	Subscribing to channel: listen <channel>
 */
-func processRequest(body string, conn net.Conn) {
+func processRequest(body string, conn net.Conn, id int) {
 	content := strings.Split(body, " ")
 	fmt.Printf(">>>>>> %v\n", body)
 
@@ -96,17 +96,17 @@ func processRequest(body string, conn net.Conn) {
 
 	switch {
 	case content[0] == "->":
-		receiveFile(content[1], content[2], channel, conn)
-	case content[0] == "listen":
+
+		addClient(id, channel, clientAddr)
+		receiveFile(content[1], content[2], channel, id, conn)
+
 		m.Lock()
-		if copy, ok := Data[channel]; ok {
-			copy.Clients = append(Data[channel].Clients, clientAddr)
-			fmt.Printf("%v\n", copy.Clients)
-			Data[channel] = copy
-		}
+		delete(Data[channel].Clients, id)
 		m.Unlock()
 
-		sendtoClient(channel, conn)
+	case content[0] == "listen":
+		addClient(id, channel, clientAddr)
+		sendtoClient(channel, id, conn)
 
 	default:
 		fmt.Printf("Malformed request: %s\n", body)
@@ -117,16 +117,16 @@ func processRequest(body string, conn net.Conn) {
 /*
 Receives files from the connected client under the specified channel.
 */
-func receiveFile(size, filename string, channel int, conn net.Conn) {
+func receiveFile(size, filename string, channel, connId int, conn net.Conn) {
 	// Convert size to int64
 	fileSize, err := strconv.ParseInt(size, 10, 64)
 	if err != nil {
 		fmt.Println("Error reading file size")
-		os.Exit(1)
+		return
 	}
 
 	if _, err = conn.Write([]byte("OK")); err != nil {
-		fmt.Println("Error sending OK signal to client", err.Error())
+		checkError(err, connId, channel)
 	}
 
 	m.Lock()
@@ -140,9 +140,9 @@ func receiveFile(size, filename string, channel int, conn net.Conn) {
 	m.Unlock()
 	inputBuffer := make([]byte, fileSize)
 	_, err = conn.Read(inputBuffer)
-	if err != nil {
-		fmt.Println("Error reading file", err.Error())
-	}
+
+	checkError(err, connId, channel)
+
 	fmt.Printf("Emitting data over channel %d\n", channel)
 	chans[channel] <- inputBuffer
 }
@@ -150,10 +150,10 @@ func receiveFile(size, filename string, channel int, conn net.Conn) {
 /*
 Sends a file to the clients listening on the specified channel.
 */
-func sendtoClient(channel int, conn net.Conn) {
+func sendtoClient(channel, connId int, conn net.Conn) {
 
 	if _, ok := Data[channel]; !ok {
-		fmt.Printf("Channel %d does not exist.\n")
+		fmt.Printf("Channel %d does not exist.\n", channel)
 		return
 	}
 	fmt.Printf("Subscribing to %d\n", channel)
@@ -173,17 +173,19 @@ func sendtoClient(channel int, conn net.Conn) {
 			}
 			fmt.Printf("Waiting on OK %d\n", n)
 			if _, err := conn.Read(buf); err != nil {
-				fmt.Println("Couldn't read OK from client", err)
+				checkError(err, connId, channel)
+				fmt.Println("Couldn't read OK from client")
+				return
 			}
 
 			if string(buf) == "OK" {
 				n, err := conn.Write(data)
-				if err != nil {
-					fmt.Println("Data not sent", err)
-					return
-				}
+				checkError(err, connId, channel)
+
 				fmt.Printf("Sent %dB to connection\n", n)
+
 				if _, err := conn.Read(buf); err != nil {
+					checkError(err, connId, channel)
 					fmt.Println("Couldn't read ok from client", err)
 					return
 				}
@@ -194,4 +196,14 @@ func sendtoClient(channel int, conn net.Conn) {
 
 func GetData() *map[int]Info {
 	return &Data
+}
+
+func addClient(id, channel int, addr string) {
+	m.Lock()
+	if copy, ok := Data[channel]; ok {
+		copy.Clients[id] = addr
+		fmt.Printf("%v\n", copy.Clients)
+		Data[channel] = copy
+	}
+	m.Unlock()
 }
