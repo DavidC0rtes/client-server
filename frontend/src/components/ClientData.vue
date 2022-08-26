@@ -1,9 +1,10 @@
 <!-- filename: ClientData.vue -->
 <script setup>
-import {ref, onMounted} from 'vue'
+import {ref, onMounted, provide} from 'vue'
+import TotalBytesChart from './TotalBytesChart.vue'
 
-const data = ref(0)
-
+const data = ref({0: 'a', 1:'b'})
+provide('data', data)
 const url = "http://localhost:8080/info"
 
 onMounted(async () => {
@@ -26,10 +27,18 @@ const updateData = async() => {
 				<li>{{client}}</li>
 			</ul>
 		</div>
-
+	</div>
+	<br>
+	<div class="row">
 		<h4>Statistics</h4>
+		<div class="col-md-12">
+			<div class="col-md-6">
+				<TotalBytesChart :data="data"/>
+			</div>
+			
+		</div>
 
-		<div class="col-md-4">
+		<div class="col-md-7">
 			<button type="button" class="btn btn-primary" @click="updateData">
 				Refresh
 			</button>
