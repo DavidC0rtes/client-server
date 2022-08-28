@@ -6,23 +6,23 @@ const biz = inject('info')
 const labels = ref([])
 const timelyData = []
 
-watch(biz, (newData) => {
+watch(biz, () => {
 	labels.value.push(new Date().toLocaleTimeString())
-	timelyData.push( getTotalClients())
+	timelyData.push(getTotalClients())
 })
 
 const getTotalClients = () => {
 	return biz.value.reduce((accum, object) => {
-		return accum+Object.keys(object.Clients).length
-	},0)
+		return accum + Object.keys(object.Clients).length
+	}, 0)
 }
 
 const chartData = {
-			labels: labels.value,
-			datasets: [{
-				label: "Concurrent clients",
-				data: timelyData,
-			}],
+	labels: labels.value,
+	datasets: [{
+		label: "Concurrent clients",
+		data: timelyData,
+	}],
 }
 
 const chartOptions = ref({
@@ -43,9 +43,5 @@ const chartOptions = ref({
 </script>
 
 <template>
-<Line
-	:chart-data="chartData"
-	:chart-options="chartOptions"
-	chart-id="line-chart"
-/>
+	<Line :chart-data="chartData" :chart-options="chartOptions" chart-id="line-chart" />
 </template>
