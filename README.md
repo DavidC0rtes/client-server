@@ -1,6 +1,6 @@
 # File share 
-App to send and receieve files between two or more clients and an arbitrer (server).
-Clients suscribe(listen) to specific channels.
+App to send and receive files between two or more clients and a server.
+Clients subscribe(listen) to specific channels.
 Servers coordinate them (receive files and redirect them).
 
 ## Custom protocol over TCP
@@ -54,6 +54,10 @@ run: `./client-server client receive --channel 1`, as usual help for the command
 * Vue.js (Front-end).
 
 ![Vue logo](https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Vue.js_Logo_2.svg/100px-Vue.js_Logo_2.svg.png)
+
+* Charts.js
+
+<img src="https://www.chartjs.org/img/chartjs-logo.svg" height="100px">
 
 * Bootstrap 5 (styling and css classes).
 
