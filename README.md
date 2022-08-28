@@ -44,10 +44,16 @@ run: `./client-server client receive --channel 1`, as usual help for the command
 ## Built with
 * net package.
 * [gin](https://github.com/gin-gonic/gin) (API).
-	<img src="https://raw.githubusercontent.com/gin-gonic/logo/master/color.png" height="30%">
+
+<img src="https://raw.githubusercontent.com/gin-gonic/logo/master/color.png" height="100px">
+
 * [cobra](https://cobra.dev/) (CLI arguments).
-	[![cobra logo]([https://cobra.dev/home/logo.png])]
+
+<img src="https://cobra.dev/home/logo.png" height="100px">
+
 * Vue.js (Front-end).
-	[![Vue logo]([https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Vue.js_Logo_2.svg/1184px-Vue.js_Logo_2.svg.png])]
+
+![Vue logo](https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Vue.js_Logo_2.svg/100px-Vue.js_Logo_2.svg.png)
+
 * Bootstrap 5 (styling and css classes).
-	[![bootstrap logo]([https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Bootstrap_logo.svg/512px-Bootstrap_logo.svg.png])]
+	![bootstrap logo](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Bootstrap_logo.svg/100px-Bootstrap_logo.svg.png)
