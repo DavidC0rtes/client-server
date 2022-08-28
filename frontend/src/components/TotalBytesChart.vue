@@ -1,42 +1,37 @@
 <script setup>
 import { Bar } from 'vue-chartjs'
-import {
-    Chart as ChartJS,
-    Title,
-    Tooltip,
-    Legend,
-    BarElement,
-    CategoryScale,
-    LinearScale,
-} from 'chart.js'
-import { inject, ref, computed } from 'vue'
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+import { inject, ref, computed, onMounted } from 'vue'
 
-const biz = inject('data')
+const biz = inject('info')
+const colors = ref([])
 
-console.log(biz)
-
-//let bytesTransmitted = ref(Object.keys(biz.value).map(i => biz.value[i].Total))
-
+console.log(biz.value)
 const chartData = computed(() => {
     return {
-        labels: Object.keys(biz.value),
+        labels: biz.value.map((v, i) => `Channel ${i}`),
         datasets: [{
             label: "Amount of bytes (B) transmitted",
-            data: Object.keys(biz.value).map(i => biz.value[i].Total),
+            data: biz.value.map(i => i.Total),
         }],
+      
     }
 })
 
 const chartOptions = ref({
-    responsive: true,
-    scales: {
-        y: { beginAtZero: true }
-    },
+        responsive: true,
+            scales: {
+                y: { 
+                    beginAtZero: true, 
+                }
+            },
+            backgroundColor: [
+                'rgba(50, 168, 82,0.3)',
+                'rgba(0, 41, 247,0.3)'
+            ]
 })
 </script>
 
 <template>
-    <Bar :chart-data="chartData" :chart-options="chartOptions" />
+    <Bar :chart-data="chartData" :chart-options="chartOptions" chart-id="bar-chart"/>
 </template>

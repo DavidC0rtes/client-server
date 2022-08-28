@@ -1,45 +1,51 @@
 <script setup>
-import { Bar } from 'vue-chartjs'
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-} from 'chart.js'
-import { inject, ref } from 'vue'
+import { Line } from 'vue-chartjs'
+import { inject, ref, watch } from 'vue'
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+const biz = inject('info')
+const labels = ref([])
+const timelyData = []
 
-
-const props = defineProps({
-	data: Object
+watch(biz, (newData) => {
+	labels.value.push(new Date().toLocaleTimeString())
+	timelyData.push( getTotalClients())
 })
-console.log(inject('data'))
-//const bytesTransmitted = Object.keys(props.data).filter(i => props.data[i].Total)
 
-const chartData = ref({
-	labels: ['0', '1'],
-	datasets: [{
-		label: "Connected clients since last update",
-		data: [256, 4096]
-	}],
-})
+const getTotalClients = () => {
+	return biz.value.reduce((accum, object) => {
+		return accum+Object.keys(object.Clients).length
+	},0)
+}
+
+const chartData = {
+			labels: labels.value,
+			datasets: [{
+				label: "Concurrent clients",
+				data: timelyData,
+			}],
+}
 
 const chartOptions = ref({
 	responsive: true,
+	fill: false,
+	backgroundColor: [
+		'rgba(68, 10, 131, 0.5)',
+	],
 	scales: {
-		y: { beginAtZero: true }
-	},
+		y: {
+			ticks: {
+				stepSize: 1
+			}
+		}
+	}
 })
 
 </script>
 
 <template>
-<Bar
+<Line
 	:chart-data="chartData"
 	:chart-options="chartOptions"
+	chart-id="line-chart"
 />
 </template>

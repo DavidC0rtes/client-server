@@ -21,7 +21,13 @@ func startAPI() {
 }
 
 func getInfo(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, Data)
+	// Get array from Data values
+	// easier to handle in the frontend
+	dataArr := make([]Info, len(Data))
+	for i, value := range Data {
+		dataArr[i] = value
+	}
+	c.IndentedJSON(http.StatusOK, dataArr)
 }
 
 func checkError(err error, id, channel int) {
