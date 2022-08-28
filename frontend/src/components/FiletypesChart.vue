@@ -7,9 +7,9 @@ const types = ref({})
 const files = ref(new Set())
 
 // Generate random RGBA string, alpha max value is 0.6 for aesthetics and max for colors
-// is 248 to avoid hard to see colors.
+// is 240 to avoid hard to see colors.
 const randomRGBA = () => {
-    let o = Math.round, r = Math.random, s = 248
+    let o = Math.round, r = Math.random, s = 240
     return 'rgba(' + o(r()*s)+ ',' + o(r()*s) + ',' + o(r()*s) + ',' + r().toFixed(1)*0.6 + ')'
 }
 
