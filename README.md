@@ -1,4 +1,5 @@
-# App to send and receieve files between two or more clients and an arbitrer (server).
+# File share 
+App to send and receieve files between two or more clients and an arbitrer (server).
 Clients suscribe(listen) to specific channels.
 Servers coordinate them (receive files and redirect them).
 
@@ -25,7 +26,8 @@ Flags:
   -h, --help     help for client-server
   -t, --toggle   Help message for toggle
 ```
-### To start the server with default options run `./client-server server`. 
+### Starting the server
+To start the server with default options run `./client-server server`. 
 More options/flags:
 ```
 Flags:
@@ -33,7 +35,15 @@ Flags:
   -h, --help           help for server
   -m, --max int        Maximum supported filesize (B). (default 4096)
 ```
-### To send a file to the server on channel e.g (1) run: `./client-server client send --channel 1 ../foo.txt`
+### Sending files 
+To send a file to the server on channel e.g (1) run: `./client-server client send --channel 1 ../foo.txt`
 To see additional flags and information run `./client-server client send --help`
 ### Listening(subscribing) to a channel
 run: `./client-server client receive --channel 1`, as usual help for the command is displayed by appending `--help` after `receive`.
+
+## Built with
+* net package.
+* [Gin-gonic] (https://github.com/gin-gonic/gin) (API).
+* [cobra](https://cobra.dev/) (CLI arguments).
+* Vue.js (Front-end).
+* Bootstrap 5 (styling and css classes).
