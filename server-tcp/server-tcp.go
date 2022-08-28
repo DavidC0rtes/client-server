@@ -24,30 +24,30 @@ type Info struct {
 	Clients  map[int]string
 }
 
-var chans = []chan []byte{
-	make(chan []byte),
-	make(chan []byte),
-}
+var chans = make([]chan []byte, 3)
 
-var Data = map[int]Info{
-	0: {
-		"",
-		0,
-		0,
-		make(map[int]string),
-	},
-	1: {
-		"",
-		0,
-		0,
-		make(map[int]string),
-	},
-}
+var Data = make(map[int]Info)
 
 var m sync.Mutex
 
-func Run() {
-	fmt.Println("Server running...")
+var MAX_SIZE int64
+
+func Run(numChannels int, maxFilesize int64) {
+	fmt.Printf("Server running...%d %d", numChannels, maxFilesize)
+
+	// Create and initialize every channel and the Data struct.
+	for i := 0; i < numChannels; i++ {
+		fmt.Println(i)
+		chans = append(chans, make(chan []byte))
+		Data[i] = Info{
+			"",
+			0,
+			0,
+			make(map[int]string),
+		}
+	}
+	MAX_SIZE = maxFilesize
+	fmt.Println("Server running...2")
 
 	listen, err := net.Listen(CONN_TYPE, CONN_HOST+":"+CONN_PORT)
 	if err != nil {
@@ -107,6 +107,7 @@ func processRequest(body string, conn net.Conn, id int) {
 					m.Lock()
 					delete(Data[channel].Clients, id)
 					m.Unlock()
+					b = nil
 				}
 				return
 			}
@@ -141,6 +142,11 @@ func receiveFile(size, filename string, channel, connId int, conn net.Conn) {
 	fileSize, err := strconv.ParseInt(size, 10, 64)
 	if err != nil {
 		fmt.Println("Error reading file size")
+		return
+	}
+
+	if fileSize > MAX_SIZE {
+		fmt.Printf("Error filesize (%d) exceeds maximum filesize allowed (%d)\n", fileSize, MAX_SIZE)
 		return
 	}
 
@@ -212,11 +218,6 @@ func sendtoClient(channel, connId int, conn net.Conn) {
 		}
 	}
 }
-
-func GetData() *map[int]Info {
-	return &Data
-}
-
 func addClient(id, channel int, addr string) {
 	m.Lock()
 	if copy, ok := Data[channel]; ok {

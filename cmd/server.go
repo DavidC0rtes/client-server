@@ -6,8 +6,11 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/DavidC0rtes/client-server/server-tcp"
+	server_tcp "github.com/DavidC0rtes/client-server/server-tcp"
 )
+
+var numChannels int
+var maxFilesize int64
 
 // serverCmd represents the server command
 var serverCmd = &cobra.Command{
@@ -15,7 +18,7 @@ var serverCmd = &cobra.Command{
 	Short: "Initialize the server",
 	Long:  `tells the application to start in server mode.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		server_tcp.Run()
+		server_tcp.Run(numChannels, maxFilesize)
 	},
 }
 
@@ -31,4 +34,6 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// serverCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	serverCmd.Flags().IntVarP(&numChannels, "channels", "c", 3, "Tells the number of channels to create.")
+	serverCmd.Flags().Int64VarP(&maxFilesize, "max", "m", 4096, "Maximum supported filesize (B).")
 }
