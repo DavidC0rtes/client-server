@@ -44,7 +44,7 @@ run: `./client-server client receive --channel 1`, as usual help for the command
 ## Built with
 * net package.
 * [gin](https://github.com/gin-gonic/gin) (API).
-	[![gin logo](https://raw.githubusercontent.com/gin-gonic/logo/master/color.png)]
+	<img src="https://raw.githubusercontent.com/gin-gonic/logo/master/color.png" height="30%">
 * [cobra](https://cobra.dev/) (CLI arguments).
 	[![cobra logo]([https://cobra.dev/home/logo.png])]
 * Vue.js (Front-end).
