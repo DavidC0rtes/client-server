@@ -17,13 +17,17 @@ import TotalBytesChart from './TotalBytesChart.vue'
 import TotalClientsChart from './TotalClientsChart.vue'
 import FiletypesChart from './FiletypesChart.vue'
 import ClientsDropdown from './ClientsDropdown.vue'
+import { inject } from 'vue'
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, LineElement, PointElement)
+
+const info = inject('info')
 </script>
 
 <template>
     <div id="datarow" class="row">
         <h4>Listening clients📨</h4>
+        <h5 v-if="info[0]">Maximum size: <span class="badge bg-info text-dark">{{info[0].MaxSize}}B</span></h5>
         <div class="col-md-7">
             <ClientsDropdown />
         </div>
@@ -55,6 +59,12 @@ ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale,
 #computer-img {
     object-fit: cover;
     border-radius: 2em;
-    height: 150px;
+    height: 200px;
+}
+#datarow {
+    align-items: center;
+}
+h4 {
+    font-weight: 600;
 }
 </style>

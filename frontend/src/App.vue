@@ -47,12 +47,12 @@ const updateData = async () => {
           height="40"
           class="d-inline-block align-text-top"
         />
-        Server frontend
+        FileShare
       </h1>
        <button
           type="button"
           id="refresh-button"
-          class="btn btn-primary btn-sm col-md-1"
+          class="btn btn-primary btn-md col-md-2"
           @click="updateData();toggleRotate()"
         ><i id="icon-refresh" class="fa-solid fa-arrow-rotate-right"></i> Refresh</button>
     </div>

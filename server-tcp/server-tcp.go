@@ -22,6 +22,7 @@ type Info struct {
 	Filesize int64
 	Total    int64
 	Clients  map[int]string
+	MaxSize  int64
 }
 
 var chans = make([]chan []byte, 3)
@@ -33,17 +34,17 @@ var m sync.Mutex
 var MAX_SIZE int64
 
 func Run(numChannels int, maxFilesize int64) {
-	fmt.Printf("Server running...%d %d", numChannels, maxFilesize)
+	fmt.Printf("Server starting...Channels: %d Max file size: %d(B)\n", numChannels, maxFilesize)
 
 	// Create and initialize every channel and the Data struct.
 	for i := 0; i < numChannels; i++ {
-		fmt.Println(i)
 		chans = append(chans, make(chan []byte))
 		Data[i] = Info{
 			"",
 			0,
 			0,
 			make(map[int]string),
+			maxFilesize,
 		}
 	}
 	MAX_SIZE = maxFilesize

@@ -21,10 +21,10 @@ func startAPI() {
 }
 
 func getInfo(c *gin.Context) {
-	// Get array from Data values
-	// easier to handle in the frontend
+	// Converting the Data var to slice makes it easier to handle in the frontend
 	dataArr := make([]Info, len(Data))
 	for i, value := range Data {
+		fmt.Println(value)
 		dataArr[i] = value
 	}
 	c.IndentedJSON(http.StatusOK, dataArr)
