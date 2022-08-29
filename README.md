@@ -5,7 +5,7 @@ Servers coordinate them (receive files and redirect them).
 
 ## Custom protocol over TCP
 A simple protocol to enable the communication between client and server.
-* Sending files: `-> <data> <content-size> @<channel> <CLIENT-LOCAL-ADDRESS>` 
+* Sending files: `-> <data> <content-size> <channel> <CLIENT-LOCAL-ADDRESS>` 
 * Subscribing to channel: `listen <channel>`
 * Client disconnecting from server: `disconnect <CLIENT-LOCAL-ADDRESS>`
 
@@ -40,6 +40,17 @@ To send a file to the server on channel e.g (1) run: `./client-server client sen
 To see additional flags and information run `./client-server client send --help`
 ### Listening(subscribing) to a channel
 run: `./client-server client receive --channel 1`, as usual help for the command is displayed by appending `--help` after `receive`.
+
+## Frontend
+The frontend serves as a reporting page where general information about the server is displayed:
+* Current file and size being transmitted on each channel.
+* Current clients listening over each channel.
+* Amount of bytes transmitted since the last update on each channel.
+* Line graph showing historic data of total concurrent clients.
+* Filetypes transmitted.
+
+The frontend running on port `5173` gets all this data from an API running on port `8000` by making a GET request to the `/info` route. Said API is started alongside the server but they are different applications.
+
 
 ## Built with
 * net package.
