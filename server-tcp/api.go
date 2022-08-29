@@ -8,6 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// startAPI, starts an API ;-) leveraging on gin router capabilities
+// the only route is /info which returns a JSON of the Data variable.
+// That is the only purpose of the API.
 func startAPI() {
 	router := gin.Default()
 
@@ -30,7 +33,7 @@ func getInfo(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, dataArr)
 }
 
-func checkError(err error, id, channel int) {
+func checkError(err error) {
 	if err != nil {
 		fmt.Println(err)
 		return

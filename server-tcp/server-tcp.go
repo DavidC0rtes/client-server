@@ -34,7 +34,7 @@ var m sync.Mutex
 var MAX_SIZE int64
 
 func Run(numChannels int, maxFilesize int64) {
-	fmt.Printf("Server starting...Channels: %d Max file size: %d(B)\n", numChannels, maxFilesize)
+	fmt.Printf("Server starting with %d channels and max file size of %d(B)\n", numChannels, maxFilesize)
 
 	// Create and initialize every channel and the Data struct.
 	for i := 0; i < numChannels; i++ {
@@ -48,7 +48,6 @@ func Run(numChannels int, maxFilesize int64) {
 		}
 	}
 	MAX_SIZE = maxFilesize
-	fmt.Println("Server running...2")
 
 	listen, err := net.Listen(CONN_TYPE, CONN_HOST+":"+CONN_PORT)
 	if err != nil {
@@ -73,10 +72,7 @@ func handleIncomingRequest(conn net.Conn, id int) {
 	// store incoming data
 	buffer := make([]byte, 4096)
 	n, err := conn.Read(buffer)
-	if err != nil {
-		fmt.Println("Error reading request:", err.Error())
-		return
-	}
+	checkError(err)
 
 	processRequest(string(buffer[:n]), conn, id)
 	conn.Close()
@@ -86,8 +82,8 @@ func handleIncomingRequest(conn net.Conn, id int) {
 Process any given request sent to the server.
 A valid request has the form:
 
-	Sending files: -> <content-size> <file> <channel>
-	Subscribing to channel: listen <channel>
+	Sending files: -> <content-size> <file> <channel> <ip:port>
+	Subscribing to channel: listen <channel> <ip:port>
 */
 func processRequest(body string, conn net.Conn, id int) {
 	content := strings.Split(body, " ")
@@ -135,16 +131,11 @@ func processRequest(body string, conn net.Conn, id int) {
 	}
 }
 
-/*
-Receives files from the connected client under the specified channel.
-*/
+// Receives files from the connected client under the specified channel.
 func receiveFile(size, filename string, channel, connId int, conn net.Conn) {
 	// Convert size to int64
 	fileSize, err := strconv.ParseInt(size, 10, 64)
-	if err != nil {
-		fmt.Println("Error reading file size")
-		return
-	}
+	checkError(err)
 
 	if fileSize > MAX_SIZE {
 		fmt.Printf("Error filesize (%d) exceeds maximum filesize allowed (%d)\n", fileSize, MAX_SIZE)
@@ -152,7 +143,7 @@ func receiveFile(size, filename string, channel, connId int, conn net.Conn) {
 	}
 
 	if _, err = conn.Write([]byte("OK")); err != nil {
-		checkError(err, connId, channel)
+		checkError(err)
 	}
 
 	m.Lock()
@@ -167,7 +158,7 @@ func receiveFile(size, filename string, channel, connId int, conn net.Conn) {
 	inputBuffer := make([]byte, fileSize)
 	_, err = conn.Read(inputBuffer)
 
-	checkError(err, connId, channel)
+	checkError(err)
 
 	fmt.Printf("Emitting data over channel %d\n", channel)
 	chans[channel] <- inputBuffer
@@ -199,19 +190,19 @@ func sendtoClient(channel, connId int, conn net.Conn) {
 			}
 			fmt.Printf("Waiting on OK %d\n", n)
 			if _, err := conn.Read(buf); err != nil {
-				checkError(err, connId, channel)
+				checkError(err)
 				fmt.Println("Couldn't read OK from client")
 				return
 			}
 
 			if string(buf) == "OK" {
 				n, err := conn.Write(data)
-				checkError(err, connId, channel)
+				checkError(err)
 
 				fmt.Printf("Sent %dB to connection\n", n)
 
 				if _, err := conn.Read(buf); err != nil {
-					checkError(err, connId, channel)
+					checkError(err)
 					fmt.Println("Couldn't read ok from client", err)
 					return
 				}
