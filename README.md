@@ -6,7 +6,7 @@ Servers coordinate them (receive files and redirect them).
 ## Custom protocol over TCP
 A simple protocol to enable the communication between client and server.
 * Sending files: `-> <data> <content-size> <channel> <CLIENT-LOCAL-ADDRESS>` 
-* Subscribing to channel: `listen <channel>`
+* Subscribing to channel: `listen <channel> <CLIENT-LOCAL-ADDRESS>`
 * Client disconnecting from server: `disconnect <CLIENT-LOCAL-ADDRESS>`
 
 The client's local address is used and saved for reporting statistics in the frontend.
@@ -49,7 +49,7 @@ The frontend serves as a reporting page where general information about the serv
 * Line graph showing historic data of total concurrent clients.
 * Filetypes transmitted.
 
-The frontend running on port `5173` gets all this data from an API running on port `8000` by making a GET request to the `/info` route. Said API is started alongside the server but they are different applications.
+The frontend running on port `5173` gets all this data from an API running on port `8080` by making a GET request to the `/info` route. Said API is started alongside the server but they are different applications.
 
 
 ## Built with
