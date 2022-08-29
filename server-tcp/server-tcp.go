@@ -33,6 +33,7 @@ var m sync.Mutex
 
 var MAX_SIZE int64
 
+// Run, starts the server with the desired number of channels and desired max filesize.
 func Run(numChannels int, maxFilesize int64) {
 	fmt.Printf("Server starting with %d channels and max file size of %d(B)\n", numChannels, maxFilesize)
 
@@ -56,6 +57,7 @@ func Run(numChannels int, maxFilesize int64) {
 	}
 	defer listen.Close()
 	fmt.Printf("Waiting for incoming requests on %s:%s\n", CONN_HOST, CONN_PORT)
+
 	go startAPI()
 	// forever...
 	for i := 0; ; i++ {
@@ -64,6 +66,8 @@ func Run(numChannels int, maxFilesize int64) {
 			fmt.Println("Error accepting: ", err.Error())
 			os.Exit(2)
 		}
+		// i serves as an id for the connection, this will be useful
+		// to know which client disconnects.
 		go handleIncomingRequest(conn, i)
 	}
 }
@@ -72,7 +76,10 @@ func handleIncomingRequest(conn net.Conn, id int) {
 	// store incoming data
 	buffer := make([]byte, 4096)
 	n, err := conn.Read(buffer)
-	checkError(err)
+	if err != nil {
+		fmt.Println("Error reading protocol message")
+		return
+	}
 
 	processRequest(string(buffer[:n]), conn, id)
 	conn.Close()
@@ -93,8 +100,10 @@ func processRequest(body string, conn net.Conn, id int) {
 	clientAddr := content[len(content)-1]
 
 	// Spaghetti to detect when a client terminates.
+	// When the client sends SIGTERM (Ctrl-C) the server
+	// receives an EOF error
 	go func() {
-		b := make([]byte, 1)
+		b := make([]byte, 1) // We don't read anything from b, we just need to catch an error.
 		for {
 			_, err := conn.Read(b)
 			if err != nil {
@@ -112,16 +121,18 @@ func processRequest(body string, conn net.Conn, id int) {
 	}()
 
 	switch {
-	case content[0] == "->":
+	case content[0] == "->": // If we are receiving from a client...
 
 		addClient(id, channel, clientAddr)
 		receiveFile(content[1], content[2], channel, id, conn)
 
+		// Every access to Data needs to be inside a mutual exclusion block
+		// bc it is a global variable and is not thread-safe
 		m.Lock()
 		delete(Data[channel].Clients, id)
 		m.Unlock()
 
-	case content[0] == "listen":
+	case content[0] == "listen": // If a client wants to listen...
 		addClient(id, channel, clientAddr)
 		sendtoClient(channel, id, conn)
 
@@ -135,7 +146,10 @@ func processRequest(body string, conn net.Conn, id int) {
 func receiveFile(size, filename string, channel, connId int, conn net.Conn) {
 	// Convert size to int64
 	fileSize, err := strconv.ParseInt(size, 10, 64)
-	checkError(err)
+	if err != nil {
+		fmt.Println("Error reading filesize")
+		return
+	}
 
 	if fileSize > MAX_SIZE {
 		fmt.Printf("Error filesize (%d) exceeds maximum filesize allowed (%d)\n", fileSize, MAX_SIZE)
@@ -143,7 +157,8 @@ func receiveFile(size, filename string, channel, connId int, conn net.Conn) {
 	}
 
 	if _, err = conn.Write([]byte("OK")); err != nil {
-		checkError(err)
+		fmt.Println("Couldn't send OK to client", err)
+		return
 	}
 
 	m.Lock()
@@ -156,9 +171,10 @@ func receiveFile(size, filename string, channel, connId int, conn net.Conn) {
 	}
 	m.Unlock()
 	inputBuffer := make([]byte, fileSize)
-	_, err = conn.Read(inputBuffer)
-
-	checkError(err)
+	if _, err = conn.Read(inputBuffer); err != nil {
+		fmt.Println("Error reading from input buffer", err)
+		return
+	}
 
 	fmt.Printf("Emitting data over channel %d\n", channel)
 	chans[channel] <- inputBuffer
@@ -190,20 +206,20 @@ func sendtoClient(channel, connId int, conn net.Conn) {
 			}
 			fmt.Printf("Waiting on OK %d\n", n)
 			if _, err := conn.Read(buf); err != nil {
-				checkError(err)
 				fmt.Println("Couldn't read OK from client")
 				return
 			}
 
 			if string(buf) == "OK" {
-				n, err := conn.Write(data)
-				checkError(err)
+				n, err = conn.Write(data)
+				if err != nil {
+					fmt.Println("Couldn't send data to client", err)
+				}
 
 				fmt.Printf("Sent %dB to connection\n", n)
 
 				if _, err := conn.Read(buf); err != nil {
-					checkError(err)
-					fmt.Println("Couldn't read ok from client", err)
+					fmt.Println("Couldn't read response from client", err)
 					return
 				}
 			}

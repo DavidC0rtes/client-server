@@ -58,7 +58,7 @@ func PrepareSend(filename string, channel int) {
 		os.Exit(1)
 	}
 
-	// Communicate with server
+	// Send special protocol message.
 	message := fmt.Sprintf("-> %d %s %d %s", fstat.Size(), fstat.Name(), channel, conn.LocalAddr().String())
 	_, err = conn.Write([]byte(message))
 	// Response from server
@@ -165,13 +165,9 @@ func waitResponse(conn net.Conn, ch chan []byte, che chan error) {
 func disconnect(conn net.Conn) {
 	msg := fmt.Sprintf("disconnect %s", conn.LocalAddr().String())
 	fmt.Println("Sending disconnect!")
-	_, err := conn.Write([]byte(msg))
-	checkError(err)
-}
-
-func checkError(err error) {
-	if err != nil {
-		fmt.Println(err)
+	if _, err := conn.Write([]byte(msg)); err != nil {
+		fmt.Println("Error sending disconnect msg", err)
 		os.Exit(1)
 	}
+
 }

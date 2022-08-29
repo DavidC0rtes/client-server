@@ -32,10 +32,3 @@ func getInfo(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusOK, dataArr)
 }
-
-func checkError(err error) {
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-}
