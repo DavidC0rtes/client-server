@@ -110,9 +110,13 @@ func Subscribe(channel int) {
 		fmt.Println("Error sending message", err.Error())
 	}
 	data := make([]byte, 4096)
+
 	for {
 		// (1) Read name
+		fmt.Println("Hola")
 		n, err := conn.Read(data)
+		fmt.Println("Adiós")
+
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -169,5 +173,4 @@ func disconnect(conn net.Conn) {
 		fmt.Println("Error sending disconnect msg", err)
 		os.Exit(1)
 	}
-
 }

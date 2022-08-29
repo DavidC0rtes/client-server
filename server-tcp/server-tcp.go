@@ -2,7 +2,6 @@ package server_tcp
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"strconv"
@@ -102,7 +101,7 @@ func processRequest(body string, conn net.Conn, id int) {
 	// Spaghetti to detect when a client terminates.
 	// When the client sends SIGTERM (Ctrl-C) the server
 	// receives an EOF error
-	go func() {
+	/* go func() {
 		b := make([]byte, 1) // We don't read anything from b, we just need to catch an error.
 		for {
 			_, err := conn.Read(b)
@@ -118,7 +117,7 @@ func processRequest(body string, conn net.Conn, id int) {
 				return
 			}
 		}
-	}()
+	}() */
 
 	switch {
 	case content[0] == "->": // If we are receiving from a client...
@@ -196,8 +195,8 @@ func sendtoClient(channel, connId int, conn net.Conn) {
 		buf := make([]byte, 2)
 		select {
 		case data := <-chans[channel]:
-			m.Lock()
 			fmt.Printf("Sending %v\n", Data[channel].CurrFile)
+			m.Lock()
 			n, err := conn.Write([]byte(Data[channel].CurrFile))
 			m.Unlock()
 			if err != nil {
@@ -230,7 +229,6 @@ func addClient(id, channel int, addr string) {
 	m.Lock()
 	if copy, ok := Data[channel]; ok {
 		copy.Clients[id] = addr
-		fmt.Printf("%v\n", copy.Clients)
 		Data[channel] = copy
 	}
 	m.Unlock()
