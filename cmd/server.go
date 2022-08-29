@@ -34,6 +34,6 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// serverCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	serverCmd.Flags().IntVarP(&numChannels, "channels", "c", 3, "Tells the number of channels to create.")
+	serverCmd.Flags().IntVarP(&numChannels, "channels", "c", 3, "Number of channels to create.")
 	serverCmd.Flags().Int64VarP(&maxFilesize, "max", "m", 4096, "Maximum supported filesize (B).")
 }

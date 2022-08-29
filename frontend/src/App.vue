@@ -13,15 +13,25 @@ onMounted(async () => {
   updateData()
 })
 
+const toggleRotate = () => {
+  const icon = document.querySelector("#icon-refresh")
+  icon.classList.add("rotate")
+  
+  setTimeout(() => {
+    icon.classList.remove("rotate")
+  }, 1000)
+}
+
 const updateData = async () => {
   try {
     info.value = await (await fetch(url)).json()
-    console.log(info.value)
+    console.info(info.value)
     showError.value = false
   } catch (error) {
     console.error(error)
     showError.value = true
   }
+  
 
 }
 </script>
@@ -39,18 +49,19 @@ const updateData = async () => {
         />
         Server frontend
       </h1>
+       <button
+          type="button"
+          id="refresh-button"
+          class="btn btn-primary btn-sm col-md-1"
+          @click="updateData();toggleRotate()"
+        ><i id="icon-refresh" class="fa-solid fa-arrow-rotate-right"></i> Refresh</button>
     </div>
   </nav>
   <main>
     <div id="root" class="container">
       <div id="header" class="row">
         <h2 class="col-md-5">Latest data from server</h2>
-        <button
-          type="button"
-          id="refresh-button"
-          class="btn btn-primary btn-sm col-md-1"
-          @click="updateData"
-        >Refresh</button>
+        
       </div>
       <hr />
       <div id="second-header" class="row">
@@ -108,5 +119,14 @@ hr {
   top: 50;
   inset-inline-end: 0;
   position: absolute;
+}
+
+.rotate {
+  -moz-transition: all 0.5s linear;
+  -webkit-transition: all 0.5s linear;
+  transition: all 0.5s linear;
+  -moz-transform:rotate(360deg);
+  -webkit-transform:rotate(360deg);
+  transform:rotate(360deg);
 }
 </style>

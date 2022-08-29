@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+
 	client_tcp "github.com/DavidC0rtes/client-server/client-tcp"
 
 	"github.com/spf13/cobra"
@@ -36,6 +37,6 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// receiveCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	receiveCmd.Flags().IntVar(&channelReceive, "channel", 0, "Channel to listen to.")
+	receiveCmd.Flags().IntVarP(&channelReceive, "channel", "c", 0, "Channel to listen to.")
 	receiveCmd.MarkFlagRequired("channel")
 }

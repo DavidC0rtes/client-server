@@ -25,7 +25,8 @@ const chartOptions = ref({
     },
     backgroundColor: [
         'rgba(50, 168, 82,0.3)',
-        'rgba(0, 41, 247,0.3)'
+        'rgba(0, 41, 247,0.3)',
+        'rgba(100, 241, 47,0.3)'
     ]
 })
 </script>
