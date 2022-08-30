@@ -2,7 +2,6 @@ package server_tcp
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"strconv"
@@ -103,7 +102,7 @@ func processRequest(body string, conn net.Conn, id int) {
 	// Spaghetti to detect when a client terminates.
 	// When the client sends SIGTERM (Ctrl-C) the server
 	// receives an EOF error
-	go func() {
+	/* go func() {
 		b := make([]byte, 1) // We don't read anything from b, we just need to catch an error.
 		for {
 			_, err := conn.Read(b)
@@ -119,7 +118,7 @@ func processRequest(body string, conn net.Conn, id int) {
 				return
 			}
 		}
-	}()
+	}() */
 
 	switch {
 	case content[0] == "->": // If we are receiving from a client...
@@ -178,7 +177,9 @@ func receiveFile(size, filename string, channel, connId int, conn net.Conn) {
 	}
 
 	fmt.Printf("Emitting data over channel %d\n", channel)
-	chans[channel] <- inputBuffer
+	for {
+		chans[channel] <- inputBuffer
+	}
 }
 
 /*
@@ -192,7 +193,7 @@ func sendtoClient(channel, connId int, conn net.Conn) {
 	}
 	fmt.Printf("Subscribing to %d\n", channel)
 
-	// Receives and broadcast file contents to the channel.
+loop:
 	for {
 		buf := make([]byte, 2)
 		select {
@@ -225,7 +226,22 @@ func sendtoClient(channel, connId int, conn net.Conn) {
 				}
 			}
 		default:
-			//fmt.Printf("No info over channel %d -- %v\n", channel, chans)
+			conn.Write([]byte("Nofile"))
+			bf := make([]byte, 1)
+			n, err := conn.Read(bf)
+			if err != nil {
+				fmt.Println("Couldn't read response from client", err)
+			}
+
+			resp := string(bf[:n])
+			if resp != "n" {
+				fmt.Printf("Client %s whishes to disconnect.\n", conn.RemoteAddr().String())
+				m.Lock()
+				delete(Data[channel].Clients, connId)
+				m.Unlock()
+				conn.Close()
+				break loop
+			}
 		}
 	}
 }

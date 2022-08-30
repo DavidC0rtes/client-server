@@ -1,6 +1,7 @@
 package client_tcp
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -119,8 +120,21 @@ func Subscribe(channel int) {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+
+		if noFile(conn, string(data[:n])) {
+			continue
+		}
+
 		name := string(data[:n])
 		fmt.Printf("Received name %v %d\n", name, len(name))
+
+		if !wantsFile(name) {
+			if _, err := conn.Write([]byte("No")); err != nil {
+				fmt.Println("Error sending No", err)
+				os.Exit(1)
+			}
+			continue
+		}
 
 		if _, err := conn.Write([]byte("OK")); err != nil {
 			fmt.Println("Error sending OK", err)
@@ -143,27 +157,6 @@ func Subscribe(channel int) {
 	}
 }
 
-func waitResponse(conn net.Conn, ch chan []byte, che chan error) {
-	data := make([]byte, 4096)
-	for {
-		fmt.Println("Hola")
-		// Read data
-		n, err := conn.Read(data)
-		if err != nil {
-			che <- err
-			return
-		}
-		fmt.Printf("Receved name %v\n", string(data[:n]))
-		conn.Write([]byte("OK"))
-
-		n, err = conn.Read(data)
-		if err != nil {
-			che <- err
-			return
-		}
-	}
-}
-
 func disconnect(conn net.Conn) {
 	msg := fmt.Sprintf("disconnect %s", conn.LocalAddr().String())
 	fmt.Println("Sending disconnect!")
@@ -171,4 +164,37 @@ func disconnect(conn net.Conn) {
 		fmt.Println("Error sending disconnect msg", err)
 		os.Exit(1)
 	}
+}
+
+func noFile(conn net.Conn, msg string) bool {
+	if msg == "Nofile" {
+		choice := "Y"
+		fmt.Println("There are no files being shared on this channel. Disconnect? (Y/n)")
+		fmt.Scanln(&choice)
+
+		_, err := conn.Write([]byte(choice))
+		if err != nil {
+			fmt.Printf("Unable to send %s to server\n", choice)
+		}
+		fmt.Printf("Sent %s to server\n", choice)
+		if choice != "n" {
+			os.Exit(0)
+		}
+		return true
+	}
+	return false
+}
+
+func wantsFile(filename string) bool {
+	_, err := os.OpenFile(filename, os.O_RDONLY, 4440)
+	if !errors.Is(err, os.ErrNotExist) {
+		fmt.Printf("%s is already in the system, do you want to receive it anyway? (y/N)\n", filename)
+		choice := "N"
+		fmt.Scanln(&choice)
+		if choice != "y" {
+			return false
+		}
+	}
+
+	return true
 }
