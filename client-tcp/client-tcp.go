@@ -48,7 +48,7 @@ func connect() net.Conn {
 // PrepareSend tells the server the name and size of the file
 // it intends to share beforehand. This is important because
 // the server needs to know how many bytes to expect and how to name
-// the file. /*
+// the file.
 func PrepareSend(filename string, channel int) {
 	conn := connect()
 
@@ -113,9 +113,7 @@ func Subscribe(channel int) {
 
 	for {
 		// (1) Read name
-		fmt.Println("Hola")
 		n, err := conn.Read(data)
-		fmt.Println("Adiós")
 
 		if err != nil {
 			fmt.Println(err)

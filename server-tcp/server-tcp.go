@@ -2,6 +2,7 @@ package server_tcp
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strconv"
@@ -24,7 +25,7 @@ type Info struct {
 	MaxSize  int64
 }
 
-var chans = make([]chan []byte, 3)
+var chans []chan []byte
 
 var Data = make(map[int]Info)
 
@@ -39,6 +40,7 @@ func Run(numChannels int, maxFilesize int64) {
 	// Create and initialize every channel and the Data struct.
 	for i := 0; i < numChannels; i++ {
 		chans = append(chans, make(chan []byte))
+
 		Data[i] = Info{
 			"",
 			0,
@@ -101,7 +103,7 @@ func processRequest(body string, conn net.Conn, id int) {
 	// Spaghetti to detect when a client terminates.
 	// When the client sends SIGTERM (Ctrl-C) the server
 	// receives an EOF error
-	/* go func() {
+	go func() {
 		b := make([]byte, 1) // We don't read anything from b, we just need to catch an error.
 		for {
 			_, err := conn.Read(b)
@@ -117,7 +119,7 @@ func processRequest(body string, conn net.Conn, id int) {
 				return
 			}
 		}
-	}() */
+	}()
 
 	switch {
 	case content[0] == "->": // If we are receiving from a client...
@@ -222,6 +224,8 @@ func sendtoClient(channel, connId int, conn net.Conn) {
 					return
 				}
 			}
+		default:
+			//fmt.Printf("No info over channel %d -- %v\n", channel, chans)
 		}
 	}
 }
