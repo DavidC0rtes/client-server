@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 type NewFile struct {
@@ -121,13 +122,18 @@ func Subscribe(channel int) {
 			os.Exit(1)
 		}
 
+		// It is possible that no file is being transmitted
 		if noFile(conn, string(data[:n])) {
 			continue
 		}
 
 		name := string(data[:n])
-		fmt.Printf("Received name %v %d\n", name, len(name))
+		fmt.Printf("Server is transmitting: %v\n", name)
+		// To let the user read the CLI output
+		time.Sleep(3 * time.Second)
 
+		// It could also happen that the file being transmitted is already in the client's system
+		// we ask the user if he wants it anyway.
 		if !wantsFile(name) {
 			if _, err := conn.Write([]byte("No")); err != nil {
 				fmt.Println("Error sending No", err)
@@ -151,8 +157,10 @@ func Subscribe(channel int) {
 			fmt.Printf("Couldn't write %v %v", name, err)
 			os.Exit(1)
 		}
+		// To let the user read the CLI output
+		time.Sleep(3 * time.Second)
 
-		fmt.Printf("Received %d bytes from server copied to %v\n", n1, name)
+		fmt.Printf("Received %d bytes from server, copied to %v\n", n1, name)
 		conn.Write([]byte("ok"))
 	}
 }
@@ -166,6 +174,9 @@ func disconnect(conn net.Conn) {
 	}
 }
 
+// noFile, is called in case no file is being transmitted on the specified channel.
+// The program asks the user if he wants to disconnect, if that's the case then a
+// disconnect signal is sent to the server and the client exits.
 func noFile(conn net.Conn, msg string) bool {
 	if msg == "Nofile" {
 		choice := "Y"
@@ -185,6 +196,7 @@ func noFile(conn net.Conn, msg string) bool {
 	return false
 }
 
+// wantsFile makes sure the user wants the file being transmitted even if said file already exists.
 func wantsFile(filename string) bool {
 	_, err := os.OpenFile(filename, os.O_RDONLY, 4440)
 	if !errors.Is(err, os.ErrNotExist) {
