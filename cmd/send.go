@@ -6,7 +6,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"github.com/DavidC0rtes/client-server/client-tcp"
+	"github.com/DavidC0rtes/client-server/client"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +27,7 @@ var sendCmd = &cobra.Command{
 	Long:  `Allows the client to send files to the TCP server in the specified channel.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("send called")
-		client_tcp.PrepareSend(args[0], channel)
+		client.PrepareSend(args[0], channel)
 	},
 }
 

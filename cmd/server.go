@@ -6,7 +6,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	server_tcp "github.com/DavidC0rtes/client-server/server-tcp"
+	server_tcp "github.com/DavidC0rtes/client-server/server"
 )
 
 var numChannels int

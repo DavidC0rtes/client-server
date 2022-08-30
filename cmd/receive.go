@@ -6,7 +6,7 @@ package cmd
 import (
 	"fmt"
 
-	client_tcp "github.com/DavidC0rtes/client-server/client-tcp"
+	client_tcp "github.com/DavidC0rtes/client-server/client"
 
 	"github.com/spf13/cobra"
 )
