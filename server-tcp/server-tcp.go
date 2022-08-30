@@ -90,15 +90,15 @@ func handleIncomingRequest(conn net.Conn, id int) {
 Process any given request sent to the server.
 A valid request has the form:
 
-	Sending files: -> <content-size> <file> <channel> <ip:port>
-	Subscribing to channel: listen <channel> <ip:port>
+	Sending files: -> <content-size> <file> <channel>
+	Subscribing to channel: listen <channel>
 */
 func processRequest(body string, conn net.Conn, id int) {
 	content := strings.Split(body, " ")
 	fmt.Printf(">>>>>> %v\n", body)
 
-	channel, _ := strconv.Atoi(content[len(content)-2])
-	clientAddr := content[len(content)-1]
+	channel, _ := strconv.Atoi(content[len(content)-1])
+	clientAddr := conn.RemoteAddr().String()
 
 	// Spaghetti to detect when a client terminates.
 	// When the client sends SIGTERM (Ctrl-C) the server

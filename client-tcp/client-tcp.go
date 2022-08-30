@@ -59,7 +59,7 @@ func PrepareSend(filename string, channel int) {
 	}
 
 	// Send special protocol message.
-	message := fmt.Sprintf("-> %d %s %d %s", fstat.Size(), fstat.Name(), channel, conn.LocalAddr().String())
+	message := fmt.Sprintf("-> %d %s %d", fstat.Size(), fstat.Name(), channel)
 	_, err = conn.Write([]byte(message))
 	// Response from server
 	buf := make([]byte, 4096)
@@ -104,7 +104,7 @@ func Subscribe(channel int) {
 	conn := connect()
 	defer conn.Close()
 	// Communicate with server
-	message := fmt.Sprintf("listen %d %s", channel, conn.LocalAddr().String())
+	message := fmt.Sprintf("listen %d", channel)
 	_, err := conn.Write([]byte(message))
 	if err != nil {
 		fmt.Println("Error sending message", err.Error())
