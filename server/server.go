@@ -26,6 +26,7 @@ type Info struct {
 
 var chans []chan []byte
 var quit = make(chan int)
+var done = make(chan bool)
 var Data = make(map[int]Info)
 
 var m sync.Mutex
@@ -100,13 +101,19 @@ func processRequest(body string, conn net.Conn, id int) {
 	case content[0] == "->": // If we are receiving from a client...
 
 		addClient(id, channel, clientAddr)
-		receiveFile(content[1], content[2], channel, id, conn)
 
 		// Every access to Data needs to be inside a mutual exclusion block
 		// bc it is a global variable and is not thread-safe
-		m.Lock()
-		delete(Data[channel].Clients, id)
-		m.Unlock()
+		/* go func() {
+			<-done
+			m.Lock()
+			fmt.Println("goodbye")
+			delete(Data[channel].Clients, id)
+			m.Unlock()
+			return
+		}() */
+
+		receiveFile(content[1], content[2], channel, id, conn)
 
 	case content[0] == "listen": // If a client wants to listen...
 		addClient(id, channel, clientAddr)

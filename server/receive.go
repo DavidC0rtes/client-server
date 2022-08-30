@@ -1,8 +1,10 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 )
 
@@ -28,9 +30,15 @@ func receiveFile(size, filename string, channel, connId int, conn net.Conn) {
 	m.Lock()
 	if copy, ok := Data[channel]; ok {
 		fmt.Println("H")
-		if filename != Data[channel].CurrFile && copy.CurrFile != "" {
+
+		dummyf, err := os.OpenFile(filename, os.O_RDONLY, 4440)
+		if errors.Is(err, os.ErrNotExist) && Data[channel].CurrFile != "" {
 			quit <- 1
 		}
+		if err == nil {
+			dummyf.Close()
+		}
+
 		fmt.Println("D")
 		copy.CurrFile = filename
 		copy.Filesize = fileSize
@@ -39,15 +47,14 @@ func receiveFile(size, filename string, channel, connId int, conn net.Conn) {
 		Data[channel] = copy
 	}
 	m.Unlock()
+
 	inputBuffer := make([]byte, fileSize)
-	//m.Lock()
 	if _, err = conn.Read(inputBuffer); err != nil {
 		fmt.Println("Error reading from input buffer", err)
 		return
 	}
-	//m.Unlock()
+	//done <- true
 	fmt.Printf("Emitting data over channel %d\n", channel)
-
 	for {
 		select {
 		case <-quit:
