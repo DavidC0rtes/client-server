@@ -7,8 +7,9 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
-	"time"
 )
 
 type NewFile struct {
@@ -127,40 +128,46 @@ func Subscribe(channel int) {
 			continue
 		}
 
-		name := string(data[:n])
-		fmt.Printf("Server is transmitting: %v\n", name)
-		// To let the user read the CLI output
-		time.Sleep(3 * time.Second)
+		finfo := strings.Split(string(data[:n]), "|")
+
+		fsize, _ := strconv.ParseInt(finfo[1], 10, 64)
+		//time.Sleep(3 * time.Second) // To let the user read stdout.
 
 		// It could also happen that the file being transmitted is already in the client's system
 		// we ask the user if he wants it anyway.
-		if !wantsFile(name) {
+		if !wantsFile(finfo[0]) {
 			if _, err := conn.Write([]byte("No")); err != nil {
 				fmt.Println("Error sending No", err)
 				os.Exit(1)
 			}
 			continue
 		}
+		fmt.Printf("Server is transmitting: %v\n", finfo[0])
 
 		if _, err := conn.Write([]byte("OK")); err != nil {
 			fmt.Println("Error sending OK", err)
 			os.Exit(1)
 		}
 
-		n1, err := conn.Read(data)
+		f, err := os.Create(finfo[0])
+
+		written, err := io.CopyN(f, conn, fsize)
+		//n1, err := conn.Read(data)
 		if err != nil {
+			fmt.Printf("Error copying %d/%d data to file %v", written, fsize, err)
 			os.Exit(1)
 		}
 
-		err = os.WriteFile(name, data[:n1], 0666)
+		/* err = os.WriteFile(finfo[0], data[:n1], 0666)
 		if err != nil {
-			fmt.Printf("Couldn't write %v %v", name, err)
+			fmt.Printf("Couldn't write %v %v", finfo[0], err)
 			os.Exit(1)
-		}
-		// To let the user read the CLI output
-		time.Sleep(3 * time.Second)
+		} */
 
-		fmt.Printf("Received %d bytes from server, copied to %v\n", n1, name)
+		//time.Sleep(3 * time.Second) // To let the user read stdout.
+
+		fmt.Printf("Received %d bytes from server, copied to %v\n", written, finfo[0])
+		f.Close()
 		conn.Write([]byte("ok"))
 	}
 }
@@ -199,14 +206,17 @@ func noFile(conn net.Conn, msg string) bool {
 // wantsFile makes sure the user wants the file being transmitted even if said file already exists.
 func wantsFile(filename string) bool {
 	_, err := os.OpenFile(filename, os.O_RDONLY, 4440)
-	if !errors.Is(err, os.ErrNotExist) {
-		fmt.Printf("%s is already in the system, do you want to receive it anyway? (y/N)\n", filename)
-		choice := "N"
-		fmt.Scanln(&choice)
-		if choice != "y" {
-			return false
-		}
-	}
+	return errors.Is(err, os.ErrNotExist)
+	/*
+		 	if !errors.Is(err, os.ErrNotExist) {
+				fmt.Printf("%s is already in the system, do you want to receive it anyway? (y/N)\n", filename)
+				choice := "N"
+				fmt.Scanln(&choice)
+				if choice != "y" {
+					return false
+				}
+			}
 
-	return true
+			return true
+	*/
 }

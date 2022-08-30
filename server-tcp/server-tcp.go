@@ -1,7 +1,9 @@
 package server_tcp
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strconv"
@@ -25,7 +27,7 @@ type Info struct {
 }
 
 var chans []chan []byte
-
+var quit = make(chan int)
 var Data = make(map[int]Info)
 
 var m sync.Mutex
@@ -85,40 +87,16 @@ func handleIncomingRequest(conn net.Conn, id int) {
 	conn.Close()
 }
 
-/*
-Process any given request sent to the server.
-A valid request has the form:
-
-	Sending files: -> <content-size> <file> <channel>
-	Subscribing to channel: listen <channel>
-*/
+// Process any given request sent to the server.
+// A valid request has the form:
+// Sending files: -> <content-size> <file> <channel>
+// Subscribing to channel: listen <channel>
 func processRequest(body string, conn net.Conn, id int) {
 	content := strings.Split(body, " ")
 	fmt.Printf(">>>>>> %v\n", body)
 
 	channel, _ := strconv.Atoi(content[len(content)-1])
 	clientAddr := conn.RemoteAddr().String()
-
-	// Spaghetti to detect when a client terminates.
-	// When the client sends SIGTERM (Ctrl-C) the server
-	// receives an EOF error
-	/* go func() {
-		b := make([]byte, 1) // We don't read anything from b, we just need to catch an error.
-		for {
-			_, err := conn.Read(b)
-			if err != nil {
-
-				if err == io.EOF {
-					fmt.Printf("Client %d disconnected from channel %d\n", id, channel)
-					m.Lock()
-					delete(Data[channel].Clients, id)
-					m.Unlock()
-					b = nil
-				}
-				return
-			}
-		}
-	}() */
 
 	switch {
 	case content[0] == "->": // If we are receiving from a client...
@@ -163,6 +141,11 @@ func receiveFile(size, filename string, channel, connId int, conn net.Conn) {
 
 	m.Lock()
 	if copy, ok := Data[channel]; ok {
+		fmt.Println("H")
+		if filename != Data[channel].CurrFile && copy.CurrFile != "" {
+			quit <- 1
+		}
+		fmt.Println("D")
 		copy.CurrFile = filename
 		copy.Filesize = fileSize
 		copy.Total = Data[channel].Total + fileSize
@@ -171,20 +154,27 @@ func receiveFile(size, filename string, channel, connId int, conn net.Conn) {
 	}
 	m.Unlock()
 	inputBuffer := make([]byte, fileSize)
+	//m.Lock()
 	if _, err = conn.Read(inputBuffer); err != nil {
 		fmt.Println("Error reading from input buffer", err)
 		return
 	}
-
+	//m.Unlock()
 	fmt.Printf("Emitting data over channel %d\n", channel)
+
 	for {
-		chans[channel] <- inputBuffer
+		select {
+		case <-quit:
+			fmt.Println("New file coming, stop")
+			return
+		default:
+			fmt.Println("Sending")
+			chans[channel] <- inputBuffer
+		}
 	}
 }
 
-/*
-Sends a file to the clients listening on the specified channel.
-*/
+// Sends a file to the clients listening on the specified channel.
 func sendtoClient(channel, connId int, conn net.Conn) {
 
 	if _, ok := Data[channel]; !ok {
@@ -198,41 +188,49 @@ loop:
 		buf := make([]byte, 2)
 		select {
 		case data := <-chans[channel]:
-			fmt.Printf("Sending %v\n", Data[channel].CurrFile)
+			finfo := fmt.Sprintf("%s|%d", Data[channel].CurrFile, Data[channel].Filesize)
+			fmt.Printf("Sending file info %v-%d\n", finfo, len(data))
 			m.Lock()
-			n, err := conn.Write([]byte(Data[channel].CurrFile))
+			_, err := conn.Write([]byte(finfo))
 			m.Unlock()
 			if err != nil {
-				fmt.Println("Couldn't send filename to client", err)
-				return
+				fmt.Println("Couldn't send file info to client", err)
+				break loop
 			}
-			fmt.Printf("Waiting on OK %d\n", n)
+
+			fmt.Println("Waiting on OK")
 			if _, err := conn.Read(buf); err != nil {
 				fmt.Println("Couldn't read OK from client")
-				return
+				break loop
 			}
 
 			if string(buf) == "OK" {
-				n, err = conn.Write(data)
+				//n, err = conn.Write(data)
+				r := bytes.NewReader(data)
+				//s := strings.NewReader(string(data))
+				//fmt.Println(r.Read(data))
+				nb, err := io.CopyN(conn, r, Data[channel].Filesize)
 				if err != nil {
 					fmt.Println("Couldn't send data to client", err)
+					break loop
 				}
 
-				fmt.Printf("Sent %dB to connection\n", n)
+				fmt.Printf("Sent %dB to connection\n", nb)
 
 				if _, err := conn.Read(buf); err != nil {
 					fmt.Println("Couldn't read response from client", err)
-					return
+					break loop
 				}
 			}
 		default:
 			conn.Write([]byte("Nofile"))
 			bf := make([]byte, 1)
+
 			n, err := conn.Read(bf)
 			if err != nil {
 				fmt.Println("Couldn't read response from client", err)
+				break
 			}
-
 			resp := string(bf[:n])
 			if resp != "n" {
 				fmt.Printf("Client %s whishes to disconnect.\n", conn.RemoteAddr().String())
@@ -242,6 +240,7 @@ loop:
 				conn.Close()
 				break loop
 			}
+
 		}
 	}
 }
