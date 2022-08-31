@@ -1,9 +1,11 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -91,8 +93,14 @@ func handleIncomingRequest(conn net.Conn, id int) {
 // Sending files: -> <content-size> <file> <channel>
 // Subscribing to channel: listen <channel>
 func processRequest(body string, conn net.Conn, id int) {
-	content := strings.Split(body, " ")
+
 	fmt.Printf(">>>>>> %v\n", body)
+
+	content, err := SplitRequest(body)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	channel, _ := strconv.Atoi(content[len(content)-1])
 	clientAddr := conn.RemoteAddr().String()
@@ -119,10 +127,10 @@ func processRequest(body string, conn net.Conn, id int) {
 		addClient(id, channel, clientAddr)
 		sendtoClient(channel, id, conn)
 
-	default:
-		fmt.Printf("Malformed request: %s\n", body)
-		os.Exit(1)
 	}
+
+	fmt.Printf("Malformed request: %s\n", body)
+	os.Exit(1)
 }
 
 func addClient(id, channel int, addr string) {
@@ -132,4 +140,25 @@ func addClient(id, channel int, addr string) {
 		Data[channel] = copy
 	}
 	m.Unlock()
+}
+
+// SplitRequest returns a []string of every part of the request.
+// But first makes sure said request comply with the protocol.
+func SplitRequest(req string) ([]string, error) {
+	matchListen, err := regexp.MatchString(`^(listen)\s+\d+$`, req)
+	if err != nil {
+		return nil, err
+	}
+
+	regexSend, err := regexp.Compile(`^(->)\s+\d+\s+([a-zA-Z0-9-_])+(\.[a-zA-Z0-9]+)?\s+\d+$`)
+	if err != nil {
+		return nil, err
+	}
+
+	matchSend := regexSend.MatchString(req)
+
+	if !matchListen && !matchSend {
+		return nil, errors.New("Malformed request")
+	}
+	return strings.Fields(req), nil
 }
