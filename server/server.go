@@ -26,7 +26,7 @@ type Info struct {
 
 var chans []chan []byte
 var quit = make(chan int)
-var done = make(chan bool)
+var done = make(chan bool, 1)
 var Data = make(map[int]Info)
 
 var m sync.Mutex
@@ -104,14 +104,14 @@ func processRequest(body string, conn net.Conn, id int) {
 
 		// Every access to Data needs to be inside a mutual exclusion block
 		// bc it is a global variable and is not thread-safe
-		/* go func() {
+		go func() {
 			<-done
-			m.Lock()
-			fmt.Println("goodbye")
+			//m.Lock()
+			//fmt.Println("goodbye")
 			delete(Data[channel].Clients, id)
-			m.Unlock()
+			//m.Unlock()
 			return
-		}() */
+		}()
 
 		receiveFile(content[1], content[2], channel, id, conn)
 

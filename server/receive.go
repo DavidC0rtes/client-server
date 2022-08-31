@@ -53,7 +53,7 @@ func receiveFile(size, filename string, channel, connId int, conn net.Conn) {
 		fmt.Println("Error reading from input buffer", err)
 		return
 	}
-	//done <- true
+	done <- true
 	fmt.Printf("Emitting data over channel %d\n", channel)
 	for {
 		select {
