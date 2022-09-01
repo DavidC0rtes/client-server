@@ -18,12 +18,12 @@ func startAPI() {
 	config.AllowAllOrigins = true
 
 	router.Use(cors.New(config))
-	router.GET("/info", getInfo)
+	router.GET("/info", InfoHandler)
 
 	router.Run("localhost:8080")
 }
 
-func getInfo(c *gin.Context) {
+func InfoHandler(c *gin.Context) {
 	// Converting the Data var to slice makes it easier to handle in the frontend
 	dataArr := make([]Info, len(Data))
 	for i, value := range Data {

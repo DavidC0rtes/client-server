@@ -128,9 +128,6 @@ func processRequest(body string, conn net.Conn, id int) {
 		sendtoClient(channel, id, conn)
 
 	}
-
-	fmt.Printf("Malformed request: %s\n", body)
-	os.Exit(1)
 }
 
 func addClient(id, channel int, addr string) {
