@@ -1,15 +1,12 @@
 # File share 
-App to send and receive files between two or more clients and a server.
-Clients subscribe(listen) to specific channels.
-Servers coordinate them (receive files and redirect them).
+CLI app to send and receive files between two or more clients and a server.
+Clients can subscribe(listen) to specific channels and
+servers coordinate them (receive files and redirect them to their destination).
 
 ## Custom protocol over TCP
 A simple protocol to enable the communication between client and server.
-* Sending files: `-> <data> <content-size> <channel> <CLIENT-LOCAL-ADDRESS>` 
-* Subscribing to channel: `listen <channel> <CLIENT-LOCAL-ADDRESS>`
-* Client disconnecting from server: `disconnect <CLIENT-LOCAL-ADDRESS>`
-
-The client's local address is used and saved for reporting statistics in the frontend.
+* Sending files: `-> <content-size> <file> <channel>` 
+* Subscribing to channel: `listen <channel>`
 
 ## Usage
 ```
@@ -36,10 +33,20 @@ Flags:
   -m, --max int        Maximum supported filesize (B). (default 4096)
 ```
 ### Sending files 
-To send a file to the server on channel e.g (1) run: `./client-server client send --channel 1 ../foo.txt`
-To see additional flags and information run `./client-server client send --help`
+To send a file to the server on channel e.g (1) run: 
+
+`./client-server client send --channel 1 ../foo.txt`
+
+To see additional flags and information run 
+
+`./client-server client send --help`
 ### Listening(subscribing) to a channel
-run: `./client-server client receive --channel 1`, as usual help for the command is displayed by appending `--help` after `receive`.
+run: 
+`./client-server client receive --channel 1` 
+
+as usual help for the command is displayed by doing
+
+`./client-server client --help`
 
 ## Frontend
 The frontend serves as a reporting page where general information about the server is displayed:
