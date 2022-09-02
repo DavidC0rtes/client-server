@@ -8,6 +8,13 @@ A simple protocol to enable the communication between client and server.
 * Sending files: `-> <content-size> <file> <channel>` 
 * Subscribing to channel: `listen <channel>`
 
+![diagram for the protocol](https://i.ibb.co/dffVj5J/arquitecfileshare-protocol-drawio.png)
+
+### General working of the server
+Click the image
+
+<a href="https://ibb.co/6W32kcp"><img src="https://i.ibb.co/6W32kcp/flow-server.png" alt="flow-server" border="0"></a>
+
 ## Usage
 ```
 Usage:
